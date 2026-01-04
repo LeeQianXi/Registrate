@@ -2,9 +2,7 @@ package com.tterrag.registrate.builders;
 
 import net.minecraft.client.color.block.BlockColor;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
-import net.minecraft.client.renderer.block.model.SingleVariant;
-import net.minecraft.client.renderer.block.model.Variant;
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -13,21 +11,27 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.fml.util.ObfuscationReflectionHelper;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
+import net.neoforged.neoforge.client.model.generators.BlockStateProvider;
 import net.neoforged.neoforge.registries.DeferredHolder;
 
+import com.google.common.base.Preconditions;
+import com.google.gson.JsonElement;
 import com.tterrag.registrate.AbstractRegistrate;
 import com.tterrag.registrate.builders.BlockEntityBuilder.BlockEntityFactory;
 import com.tterrag.registrate.providers.DataGenContext;
-import com.tterrag.registrate.providers.GeneratorType;
 import com.tterrag.registrate.providers.ProviderType;
+import com.tterrag.registrate.providers.RegistrateBlockstateProvider;
+import com.tterrag.registrate.providers.RegistrateItemModelProvider;
 import com.tterrag.registrate.providers.RegistrateLangProvider;
-import com.tterrag.registrate.providers.generators.RegistrateBlockModelGenerator;
-import com.tterrag.registrate.providers.generators.RegistrateRecipeProvider;
+import com.tterrag.registrate.providers.RegistrateRecipeProvider;
 import com.tterrag.registrate.providers.loot.RegistrateBlockLootTables;
 import com.tterrag.registrate.providers.loot.RegistrateLootTableProvider.LootType;
 import com.tterrag.registrate.util.OneTimeEventReceiver;
@@ -40,8 +44,13 @@ import com.tterrag.registrate.util.nullness.NonNullFunction;
 import com.tterrag.registrate.util.nullness.NonNullSupplier;
 import com.tterrag.registrate.util.nullness.NonNullUnaryOperator;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -94,8 +103,7 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
 
     private NonNullSupplier<BlockBehaviour.Properties> initialProperties;
     private NonNullFunction<BlockBehaviour.Properties, BlockBehaviour.Properties> propertiesCallback = NonNullUnaryOperator.identity();
-    @Nullable
-    private Supplier<Supplier<ChunkSectionLayer>> renderLayer;
+    private List<Supplier<Supplier<RenderType>>> renderLayers = new ArrayList<>(1);
 
     @Nullable
     private NonNullSupplier<Supplier<BlockColor>> colorHandler;
@@ -138,16 +146,19 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
 
     /**
      * @deprecated Set your render type in your model's JSON
-     *             ({@link net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder#renderType(ResourceLocation)})
+     *             ({@link net.neoforged.neoforge.client.model.generators.ModelBuilder#renderType(ResourceLocation)}) or
+     *             override
+     *             {@link net.minecraft.client.resources.model.BakedModel#getRenderTypes(BlockState, net.minecraft.util.RandomSource, net.neoforged.neoforge.client.model.data.ModelData)}
      */
     @Deprecated(forRemoval = true)
-    public BlockBuilder<T, P> addLayer(Supplier<Supplier<ChunkSectionLayer>> layer) {
-        if (this.renderLayer == null) {
+    public BlockBuilder<T, P> addLayer(Supplier<Supplier<RenderType>> layer) {
+        RegistrateDistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+            Preconditions.checkArgument(RenderType.chunkBufferLayers().contains(layer.get().get()), "Invalid block layer: " + layer);
+        });
+        if (this.renderLayers.isEmpty()) {
             onRegister(this::registerLayers);
-            this.renderLayer = layer;
-        } else {
-            throw new IllegalStateException("Only a single layer can be registered for a block");
         }
+        this.renderLayers.add(layer);
         return this;
     }
 
@@ -155,9 +166,14 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
     protected void registerLayers(T entry) {
         RegistrateDistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
             OneTimeEventReceiver.addModListener(getOwner(), FMLClientSetupEvent.class, $ -> {
-                if (renderLayer != null) {
-                    ChunkSectionLayer layer = renderLayer.get().get();
+                if (renderLayers.size() == 1) {
+                    final RenderType layer = renderLayers.get(0).get().get();
                     ItemBlockRenderTypes.setRenderLayer(entry, layer);
+                } else if (renderLayers.size() > 1) {
+                    final Set<RenderType> layers = renderLayers.stream()
+                            .map(s -> s.get().get())
+                            .collect(Collectors.toSet());
+                    ItemBlockRenderTypes.setRenderLayer(entry, layers::contains);
                 }
             });
         });
@@ -167,7 +183,8 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
      * Create a standard {@link BlockItem} for this block, building it immediately, and not allowing for further
      * configuration.
      * <p>
-     * The item will have no lang entry (since it would duplicate the block's)
+     * The item will have no lang entry (since it would duplicate the block's) and a simple block item model (via
+     * {@link RegistrateItemModelProvider#blockItem(NonNullSupplier)}).
      *
      * @return this {@link BlockBuilder}
      * @see #item()
@@ -180,7 +197,8 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
      * Create a standard {@link BlockItem} for this block, and return the builder for it so that further customization
      * can be done.
      * <p>
-     * The item will have no lang entry (since it would duplicate the block's)
+     * The item will have no lang entry (since it would duplicate the block's) and a simple block item model (via
+     * {@link RegistrateItemModelProvider#blockItem(NonNullSupplier)}).
      * 
      * @return the {@link ItemBuilder} for the {@link BlockItem}
      */
@@ -192,8 +210,8 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
      * Create a {@link BlockItem} for this block, which is created by the given factory, and return the builder for it
      * so that further customization can be done.
      * <p>
-     * By default, the item will have no lang entry (since it would duplicate the block's) and a simple block item
-     * model.
+     * By default, the item will have no lang entry (since it would duplicate the block's) and a simple block item model
+     * (via {@link RegistrateItemModelProvider#blockItem(NonNullSupplier)}).
      * 
      * @param <I>
      *                The type of the item
@@ -202,21 +220,23 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
      * @return the {@link ItemBuilder} for the {@link BlockItem}
      */
     public <I extends Item> ItemBuilder<I, BlockBuilder<T, P>> item(NonNullBiFunction<? super T, Item.Properties, ? extends I> factory) {
-        return getOwner().<I, BlockBuilder<T, P>>item(this, getName(), p -> factory.apply(getEntry(), p.useBlockDescriptionPrefix()))
+        final var sup = asSupplier();
+        return getOwner().<I, BlockBuilder<T, P>>item(this, getName(), p -> factory.apply(getEntry(), p))
                 .setData(ProviderType.LANG, NonNullBiConsumer.noop()) // FIXME Need a beetter API for "unsetting"
                                                                       // providers
-                .model(() -> (ctx, prov) -> {
-                    getOwner().getDataProvider(ProviderType.BLOCKSTATE)
-                            .map(g -> g.seenBlockstates.get(getEntry()))
-                            .flatMap(b -> b.simpleModels())
-                            .map(b -> b.models().get(""))
-                            .map(unbaked -> {
-                                if (unbaked instanceof SingleVariant.Unbaked(Variant variant)) {
-                                    return variant.modelLocation();
-                                }
-                                return null;
-                            })
-                            .ifPresent(model -> prov.createWithExistingModel(ctx.get(), model));
+                .model((ctx, prov) -> {
+                    Optional<String> model = getOwner().getDataProvider(ProviderType.BLOCKSTATE)
+                            .flatMap(p -> p.getExistingVariantBuilder(getEntry()))
+                            .map(b -> b.getModels().get(b.partialState()))
+                            .map(BlockStateProvider.ConfiguredModelList::toJSON)
+                            .filter(JsonElement::isJsonObject)
+                            .map(j -> j.getAsJsonObject().get("model"))
+                            .map(JsonElement::getAsString);
+                    if (model.isPresent()) {
+                        prov.withExistingParent(ctx.getName(), model.get());
+                    } else {
+                        prov.blockItem(sup);
+                    }
                 });
     }
 
@@ -277,14 +297,13 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
 
     /**
      * Assign the default blockstate, which maps all states to a single model file (via
-     * {@link RegistrateBlockModelGenerator#createTrivialCube(Block)}). This is the default, so it is generally not
-     * necessary
+     * {@link RegistrateBlockstateProvider#simpleBlock(Block)}). This is the default, so it is generally not necessary
      * to call, unless for undoing previous changes.
      * 
      * @return this {@link BlockBuilder}
      */
     public BlockBuilder<T, P> defaultBlockstate() {
-        return blockstate(() -> (ctx, prov) -> prov.createTrivialCube(ctx.getEntry()));
+        return blockstate((ctx, prov) -> prov.simpleBlock(ctx.getEntry()));
     }
 
     /**
@@ -293,11 +312,10 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
      * @param cons
      *             The callback which will be invoked during data generation.
      * @return this {@link BlockBuilder}
-     * @see #setData(GeneratorType, NonNullBiConsumer)
+     * @see #setData(ProviderType, NonNullBiConsumer)
      */
-    public BlockBuilder<T, P> blockstate(NonNullSupplier<NonNullBiConsumer<DataGenContext<Block, T>, RegistrateBlockModelGenerator>> cons) {
-        if (!getOwner().doDatagen().get()) return this;
-        return setData(ProviderType.BLOCKSTATE, cons.get());
+    public BlockBuilder<T, P> blockstate(NonNullBiConsumer<DataGenContext<Block, T>, RegistrateBlockstateProvider> cons) {
+        return setData(ProviderType.BLOCKSTATE, cons);
     }
 
     /**
@@ -348,7 +366,7 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
      */
     public BlockBuilder<T, P> loot(NonNullBiConsumer<RegistrateBlockLootTables, T> cons) {
         return setData(ProviderType.LOOT, (ctx, prov) -> prov.addLootAction(LootType.BLOCK, tb -> {
-            if (ctx.getEntry().getLootTable().isPresent()) {
+            if (!ctx.getEntry().getLootTable().equals(BuiltInLootTables.EMPTY)) {
                 cons.accept(tb, ctx.getEntry());
             }
         }));
@@ -360,7 +378,7 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
      * @param cons
      *             The callback which will be invoked during data generation.
      * @return this {@link BlockBuilder}
-     * @see #setData(GeneratorType, NonNullBiConsumer)
+     * @see #setData(ProviderType, NonNullBiConsumer)
      */
     public BlockBuilder<T, P> recipe(NonNullBiConsumer<DataGenContext<Block, T>, RegistrateRecipeProvider> cons) {
         return setData(ProviderType.RECIPE, cons);
@@ -427,10 +445,9 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
     protected T createEntry() {
         @Nonnull
         BlockBehaviour.Properties properties = this.initialProperties.get();
-        // TODO why do we need this?
-        // ObfuscationReflectionHelper.setPrivateValue(BlockBehaviour.Properties.class, properties, null, "drops");
+        ObfuscationReflectionHelper.setPrivateValue(BlockBehaviour.Properties.class, properties, null, "drops");
         properties = propertiesCallback.apply(properties);
-        return factory.apply(properties.setId(getResourceKey()));
+        return factory.apply(properties);
     }
 
     @Override

@@ -1,16 +1,18 @@
 package com.tterrag.registrate.builders;
 
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.neoforged.neoforge.registries.datamaps.DataMapType;
 
 import com.tterrag.registrate.AbstractRegistrate;
 import com.tterrag.registrate.providers.DataGenContext;
-import com.tterrag.registrate.providers.GeneratorType;
 import com.tterrag.registrate.providers.ProviderType;
+import com.tterrag.registrate.providers.RegistrateProvider;
 import com.tterrag.registrate.util.entry.RegistryEntry;
-import com.tterrag.registrate.util.nullness.*;
+import com.tterrag.registrate.util.nullness.NonNullBiConsumer;
+import com.tterrag.registrate.util.nullness.NonNullConsumer;
+import com.tterrag.registrate.util.nullness.NonNullFunction;
+import com.tterrag.registrate.util.nullness.NonNullSupplier;
 
 import java.util.function.Function;
 
@@ -112,13 +114,13 @@ public interface Builder<R, T extends R, P, S extends Builder<R, T, P, S>> exten
      * @param <D>
      *             The type of provider
      * @param type
-     *             The {@link GeneratorType} for the desired provider
+     *             The {@link ProviderType} for the desired provider
      * @param cons
      *             The callback to execute when the provider is run
      * @return this builder
      */
     @SuppressWarnings("unchecked")
-    default <D> S setData(GeneratorType<? extends D> type, NonNullBiConsumer<DataGenContext<R, T>, D> cons) {
+    default <D extends RegistrateProvider> S setData(ProviderType<? extends D> type, NonNullBiConsumer<DataGenContext<R, T>, D> cons) {
         getOwner().setDataGenerator(this, type, prov -> cons.accept(DataGenContext.from(this), prov));
         return (S) this;
     }
@@ -131,13 +133,13 @@ public interface Builder<R, T extends R, P, S extends Builder<R, T, P, S>> exten
      * @param <D>
      *             The type of provider
      * @param type
-     *             The {@link GeneratorType} for the desired provider
+     *             The {@link ProviderType} for the desired provider
      * @param cons
      *             The callback to execute when the provider is run
      * @return this builder
      */
     @SuppressWarnings("unchecked")
-    default <D> S addMiscData(GeneratorType<? extends D> type, NonNullConsumer<? extends D> cons) {
+    default <D extends RegistrateProvider> S addMiscData(ProviderType<? extends D> type, NonNullConsumer<? extends D> cons) {
         getOwner().addDataGenerator(type, cons);
         return (S) this;
     }
@@ -165,23 +167,11 @@ public interface Builder<R, T extends R, P, S extends Builder<R, T, P, S>> exten
     }
 
     /**
-     * Add data map associated with this builder, with context
-     */
-    @SuppressWarnings("unchecked")
-    default <D> S dataMap(DataMapType<R, D> type, NonNullBiFunction<DataGenContext<R, T>, HolderLookup.Provider, D> factory) {
-        getOwner().addDataGenerator(ProviderType.DATA_MAP, e -> {
-            var ctx = DataGenContext.from(this);
-            e.builder(type).add(ctx.getId(), factory.apply(ctx, e.getProvider()), false);
-        });
-        return (S) this;
-    }
-
-    /**
      * Add a callback to be invoked when this entry is registered. Can be called multiple times to add multiple
      * callbacks.
      * <p>
-     * Builders which have had this method used on them (or another method which calls this one), <strong>must</strong>
-     * be registered, via
+     * Builders which have had this method used on them (or another method which calls this one, such as
+     * {@link EntityBuilder#spawnEgg(int, int)}), <strong>must</strong> be registered, via
      * {@link #register()}, or errors will be thrown when these "dangling" register callbacks are discovered at register
      * time.
      * 
@@ -199,8 +189,8 @@ public interface Builder<R, T extends R, P, S extends Builder<R, T, P, S>> exten
      * Add a callback to be invoked when this entry is registered, but only after some other registry type has been
      * registered as well. Can be called multiple times to add multiple callbacks.
      * <p>
-     * Builders which have had this method used on them (or another method which calls this one), <strong>must</strong>
-     * be registered, via
+     * Builders which have had this method used on them (or another method which calls this one, such as
+     * {@link EntityBuilder#spawnEgg(int, int)}), <strong>must</strong> be registered, via
      * {@link #register()}, or errors will be thrown when these "dangling" register callbacks are discovered at register
      * time.
      * 

@@ -6,7 +6,6 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 
 import com.tterrag.registrate.AbstractRegistrate;
 import com.tterrag.registrate.util.nullness.NonNullSupplier;
-import lombok.Getter;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -21,7 +20,6 @@ import java.util.function.Predicate;
  */
 public class RegistryEntry<R, S extends R> extends DeferredHolder<R, S> implements NonNullSupplier<S> {
 
-    @Getter
     private final AbstractRegistrate<?> owner;
 
     @SuppressWarnings("unused")

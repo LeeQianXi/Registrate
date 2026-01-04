@@ -3,16 +3,19 @@ package com.tterrag.registrate.builders;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.SpawnPlacements.SpawnPredicate;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.common.DeferredSpawnEggItem;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -85,7 +88,7 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
     private NonNullConsumer<EntityType.Builder<T>> builderCallback = $ -> {};
 
     @Nullable
-    private NonNullSupplier<NonNullFunction<EntityRendererProvider.Context, EntityRenderer<? super T, ?>>> renderer;
+    private NonNullSupplier<NonNullFunction<EntityRendererProvider.Context, EntityRenderer<? super T>>> renderer;
 
     private boolean attributesConfigured, spawnConfigured; // TODO make this more reuse friendly
 
@@ -117,7 +120,7 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
      *                 renderer
      * @return this {@link EntityBuilder}
      */
-    public EntityBuilder<T, P> renderer(NonNullSupplier<NonNullFunction<EntityRendererProvider.Context, EntityRenderer<? super T, ?>>> renderer) {
+    public EntityBuilder<T, P> renderer(NonNullSupplier<NonNullFunction<EntityRendererProvider.Context, EntityRenderer<? super T>>> renderer) {
         if (this.renderer == null && FMLEnvironment.dist.isClient()) { // First call only
             RegistrateDistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> this::registerRenderer);
         }
@@ -217,15 +220,10 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
      *                       The secondary color of the egg
      * @return this {@link EntityBuilder}
      */
-    /*
-     * TODO <1.21.4> spawn egg
-     * 
-     * @Deprecated
-     * public EntityBuilder<T, P> defaultSpawnEgg(int primaryColor, int secondaryColor) {
-     * return spawnEgg(primaryColor, secondaryColor).build();
-     * }
-     * 
-     */
+    @Deprecated
+    public EntityBuilder<T, P> defaultSpawnEgg(int primaryColor, int secondaryColor) {
+        return spawnEgg(primaryColor, secondaryColor).build();
+    }
 
     /**
      * Create a spawn egg item for this entity using the given colors, and return the builder for further configuration.
@@ -241,20 +239,13 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
      *                       The secondary color of the egg
      * @return the {@link ItemBuilder} for the egg item
      */
-    /*
-     * TODO <1.21.4> spawn egg
-     * 
-     * @SuppressWarnings({ "rawtypes", "unchecked" })
-     * 
-     * @Deprecated
-     * public ItemBuilder<? extends SpawnEggItem, EntityBuilder<T, P>> spawnEgg(int primaryColor, int secondaryColor) {
-     * var sup = asSupplier();
-     * return getOwner().item(this, getName() + "_spawn_egg", p -> new DeferredSpawnEggItem((Supplier<EntityType<?
-     * extends Mob>>) (Supplier) sup, primaryColor, secondaryColor, p)).tab(CreativeModeTabs.SPAWN_EGGS)
-     * .model((ctx, prov) -> prov.withExistingParent(ctx.getName(),
-     * ResourceLocation.withDefaultNamespace("item/template_spawn_egg")));
-     * }
-     */
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Deprecated
+    public ItemBuilder<? extends SpawnEggItem, EntityBuilder<T, P>> spawnEgg(int primaryColor, int secondaryColor) {
+        var sup = asSupplier();
+        return getOwner().item(this, getName() + "_spawn_egg", p -> new DeferredSpawnEggItem((Supplier<EntityType<? extends Mob>>) (Supplier) sup, primaryColor, secondaryColor, p)).tab(CreativeModeTabs.SPAWN_EGGS)
+                .model((ctx, prov) -> prov.withExistingParent(ctx.getName(), ResourceLocation.withDefaultNamespace("item/template_spawn_egg")));
+    }
 
     /**
      * Assign the default translation, as specified by
@@ -264,7 +255,6 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
      *
      * @return this {@link EntityBuilder}
      */
-    @Deprecated
     public EntityBuilder<T, P> defaultLang() {
         return lang(EntityType::getDescriptionId);
     }
@@ -309,7 +299,7 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
     protected EntityType<T> createEntry() {
         EntityType.Builder<T> builder = this.builder.get();
         builderCallback.accept(builder);
-        return builder.build(getResourceKey());
+        return builder.build(getName());
     }
 
     @Deprecated

@@ -11,7 +11,7 @@ dependencyResolutionManagement {
     versionCatalogs {
         libs {
             //修改此处修改NeoForge版本
-            version("modDevGradleLegacy", "2.0.103")
+            version("modDevGradleLegacy", "2.0.134")
             plugin("modDevGradleLegacy", "net.neoforged.moddev").versionRef("modDevGradleLegacy")
 
 
@@ -19,8 +19,8 @@ dependencyResolutionManagement {
 
             version("jetbrains-annotations", "26.0.2")
 
-            version("kotlin", "2.1.21")
-            version("kotlin-plugin", "2.1.21")
+            version("kotlin", "2.2.20")
+            version("kotlin-plugin", "2.2.20")
 
 
             plugin("spotless", "com.diffplug.spotless").versionRef("spotless")

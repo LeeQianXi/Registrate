@@ -1,12 +1,13 @@
 package com.tterrag.registrate.builders;
 
-import net.minecraft.client.data.models.model.ModelTemplates;
+import net.minecraft.client.color.item.ItemColor;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -17,11 +18,10 @@ import net.neoforged.neoforge.registries.datamaps.builtin.NeoForgeDataMaps;
 import com.google.common.collect.Maps;
 import com.tterrag.registrate.AbstractRegistrate;
 import com.tterrag.registrate.providers.DataGenContext;
-import com.tterrag.registrate.providers.GeneratorType;
 import com.tterrag.registrate.providers.ProviderType;
+import com.tterrag.registrate.providers.RegistrateItemModelProvider;
 import com.tterrag.registrate.providers.RegistrateLangProvider;
-import com.tterrag.registrate.providers.generators.RegistrateItemModelGenerator;
-import com.tterrag.registrate.providers.generators.RegistrateRecipeProvider;
+import com.tterrag.registrate.providers.RegistrateRecipeProvider;
 import com.tterrag.registrate.util.CreativeModeTabModifier;
 import com.tterrag.registrate.util.OneTimeEventReceiver;
 import com.tterrag.registrate.util.RegistrateDistExecutor;
@@ -86,6 +86,8 @@ public class ItemBuilder<T extends Item, P> extends AbstractBuilder<Item, T, P, 
     private NonNullSupplier<Item.Properties> initialProperties = Item.Properties::new;
     private NonNullFunction<Item.Properties, Item.Properties> propertiesCallback = NonNullUnaryOperator.identity();
 
+    @Nullable
+    private NonNullSupplier<Supplier<ItemColor>> colorHandler;
     private Map<ResourceKey<CreativeModeTab>, NonNullBiConsumer<DataGenContext<Item, T>, CreativeModeTabModifier>> creativeModeTabs = Maps.newLinkedHashMap();
 
     protected ItemBuilder(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, NonNullFunction<Item.Properties, T> factory) {
@@ -210,7 +212,29 @@ public class ItemBuilder<T extends Item, P> extends AbstractBuilder<Item, T, P, 
         return this;
     }
 
-    // TODO <1.21.4> alternate item coloring helper?
+    /**
+     * Register a block color handler for this item. The {@link ItemColor} instance can be shared across many items.
+     *
+     * @param colorHandler
+     *                     The color handler to register for this item
+     * @return this {@link ItemBuilder}
+     */
+    public ItemBuilder<T, P> color(NonNullSupplier<Supplier<ItemColor>> colorHandler) {
+        if (this.colorHandler == null) {
+            RegistrateDistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> this::registerItemColor);
+        }
+        this.colorHandler = colorHandler;
+        return this;
+    }
+
+    protected void registerItemColor() {
+        OneTimeEventReceiver.addModListener(getOwner(), RegisterColorHandlersEvent.Item.class, e -> {
+            NonNullSupplier<Supplier<ItemColor>> colorHandler = this.colorHandler;
+            if (colorHandler != null) {
+                e.register(colorHandler.get().get(), getEntry());
+            }
+        });
+    }
 
     /**
      * Assign the default model to this item, which is simply a generated model with a single texture of the same name.
@@ -218,7 +242,7 @@ public class ItemBuilder<T extends Item, P> extends AbstractBuilder<Item, T, P, 
      * @return this {@link ItemBuilder}
      */
     public ItemBuilder<T, P> defaultModel() {
-        return model(() -> (ctx, prov) -> prov.generateFlatItem(ctx.get(), ModelTemplates.FLAT_ITEM));
+        return model((ctx, prov) -> prov.generated(ctx::getEntry));
     }
 
     /**
@@ -227,11 +251,10 @@ public class ItemBuilder<T extends Item, P> extends AbstractBuilder<Item, T, P, 
      * @param cons
      *             The callback which will be invoked during data creation
      * @return this {@link ItemBuilder}
-     * @see #setData(GeneratorType, NonNullBiConsumer)
+     * @see #setData(ProviderType, NonNullBiConsumer)
      */
-    public ItemBuilder<T, P> model(NonNullSupplier<NonNullBiConsumer<DataGenContext<Item, T>, RegistrateItemModelGenerator>> cons) {
-        if (!getOwner().doDatagen().get()) return this;
-        return setData(ProviderType.ITEM_MODEL, cons.get());
+    public ItemBuilder<T, P> model(NonNullBiConsumer<DataGenContext<Item, T>, RegistrateItemModelProvider> cons) {
+        return setData(ProviderType.ITEM_MODEL, cons);
     }
 
     /**
@@ -263,7 +286,7 @@ public class ItemBuilder<T extends Item, P> extends AbstractBuilder<Item, T, P, 
      * @param cons
      *             The callback which will be invoked during data generation.
      * @return this {@link ItemBuilder}
-     * @see #setData(GeneratorType, NonNullBiConsumer)
+     * @see #setData(ProviderType, NonNullBiConsumer)
      */
     public ItemBuilder<T, P> recipe(NonNullBiConsumer<DataGenContext<Item, T>, RegistrateRecipeProvider> cons) {
         return setData(ProviderType.RECIPE, cons);
@@ -340,7 +363,7 @@ public class ItemBuilder<T extends Item, P> extends AbstractBuilder<Item, T, P, 
     protected T createEntry() {
         Item.Properties properties = this.initialProperties.get();
         properties = propertiesCallback.apply(properties);
-        return factory.apply(properties.setId(getResourceKey()));
+        return factory.apply(properties);
     }
 
     @Override

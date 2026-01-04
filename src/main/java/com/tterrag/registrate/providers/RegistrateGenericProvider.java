@@ -5,6 +5,7 @@ import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
 import net.neoforged.fml.LogicalSide;
+import net.neoforged.neoforge.common.data.ExistingFileHelper;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
 
 import com.tterrag.registrate.AbstractRegistrate;
@@ -20,6 +21,7 @@ public final class RegistrateGenericProvider implements RegistrateProvider {
     private final AbstractRegistrate<?> registrate;
     private final PackOutput output;
     private final CompletableFuture<HolderLookup.Provider> registries;
+    private final ExistingFileHelper existingFileHelper;
     private final LogicalSide side;
     private final ProviderType<RegistrateGenericProvider> providerType;
     private final List<Generator> generators = Lists.newArrayList();
@@ -32,6 +34,7 @@ public final class RegistrateGenericProvider implements RegistrateProvider {
 
         output = event.getGenerator().getPackOutput();
         registries = event.getLookupProvider();
+        existingFileHelper = event.getExistingFileHelper();
     }
 
     public RegistrateGenericProvider add(Generator generator) {
@@ -47,7 +50,7 @@ public final class RegistrateGenericProvider implements RegistrateProvider {
     @Override
     public CompletableFuture<?> run(CachedOutput cache) {
         generators.clear();
-        var data = new GeneratorData(output, registries);
+        var data = new GeneratorData(output, registries, existingFileHelper);
         registrate.genData(providerType, this);
         return CompletableFuture.allOf(generators
                 .stream()
@@ -61,7 +64,7 @@ public final class RegistrateGenericProvider implements RegistrateProvider {
         return "generic_%s_provider".formatted(side.name().toLowerCase(Locale.ROOT));
     }
 
-    public record GeneratorData(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {}
+    public record GeneratorData(PackOutput output, CompletableFuture<HolderLookup.Provider> registries, ExistingFileHelper existingFileHelper) {}
 
     @FunctionalInterface
     public interface Generator {

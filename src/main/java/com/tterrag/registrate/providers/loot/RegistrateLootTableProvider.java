@@ -10,9 +10,9 @@ import net.minecraft.data.loot.packs.VanillaLootTableProvider;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ProblemReporter;
-import net.minecraft.util.context.ContextKeySet;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSet;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.neoforged.fml.LogicalSide;
 import net.neoforged.fml.util.ObfuscationReflectionHelper;
@@ -41,9 +41,9 @@ public class RegistrateLootTableProvider extends LootTableProvider implements Re
 
         T getLootCreator(HolderLookup.Provider provider, AbstractRegistrate<?> parent, Consumer<T> callback);
 
-        ContextKeySet getLootSet();
+        LootContextParamSet getLootSet();
 
-        static <T extends RegistrateLootTables> LootType<T> register(String name, ContextKeySet set, TriFunction<HolderLookup.Provider, AbstractRegistrate<?>, Consumer<T>, T> factory) {
+        static <T extends RegistrateLootTables> LootType<T> register(String name, LootContextParamSet set, TriFunction<HolderLookup.Provider, AbstractRegistrate, Consumer<T>, T> factory) {
             LootType<T> type = new LootType<T>() {
 
                 @Override
@@ -52,7 +52,7 @@ public class RegistrateLootTableProvider extends LootTableProvider implements Re
                 }
 
                 @Override
-                public ContextKeySet getLootSet() {
+                public LootContextParamSet getLootSet() {
                     return set;
                 }
             };
@@ -66,7 +66,7 @@ public class RegistrateLootTableProvider extends LootTableProvider implements Re
     private final AbstractRegistrate<?> parent;
 
     private final Multimap<LootType<?>, Consumer<? super RegistrateLootTables>> specialLootActions = HashMultimap.create();
-    private final Multimap<ContextKeySet, Consumer<BiConsumer<ResourceKey<LootTable>, LootTable.Builder>>> lootActions = HashMultimap.create();
+    private final Multimap<LootContextParamSet, Consumer<BiConsumer<ResourceKey<LootTable>, LootTable.Builder>>> lootActions = HashMultimap.create();
     private final Set<RegistrateLootTables> currentLootCreators = new HashSet<>();
 
     private CompletableFuture<HolderLookup.Provider> provider;
@@ -100,7 +100,7 @@ public class RegistrateLootTableProvider extends LootTableProvider implements Re
         this.specialLootActions.put(type, (Consumer<RegistrateLootTables>) action);
     }
 
-    public void addLootAction(ContextKeySet set, Consumer<BiConsumer<ResourceKey<LootTable>, LootTable.Builder>> action) {
+    public void addLootAction(LootContextParamSet set, Consumer<BiConsumer<ResourceKey<LootTable>, LootTable.Builder>> action) {
         this.lootActions.put(set, action);
     }
 
@@ -110,7 +110,7 @@ public class RegistrateLootTableProvider extends LootTableProvider implements Re
         return creator;
     }
 
-    private static final BiMap<ResourceLocation, ContextKeySet> SET_REGISTRY = ObfuscationReflectionHelper.getPrivateValue(LootContextParamSets.class, null, "REGISTRY");
+    private static final BiMap<ResourceLocation, LootContextParamSet> SET_REGISTRY = ObfuscationReflectionHelper.getPrivateValue(LootContextParamSets.class, null, "REGISTRY");
 
     @Override
     public List<LootTableProvider.SubProviderEntry> getTables() {
@@ -120,7 +120,7 @@ public class RegistrateLootTableProvider extends LootTableProvider implements Re
         for (LootType<?> type : LOOT_TYPES.values()) {
             builder.add(new SubProviderEntry(provider -> getLootCreator(provider, parent, type), type.getLootSet()));
         }
-        for (ContextKeySet set : SET_REGISTRY.values()) {
+        for (LootContextParamSet set : SET_REGISTRY.values()) {
             builder.add(new SubProviderEntry((provider) -> callback -> lootActions.get(set).forEach(a -> a.accept(callback)), set));
         }
         return builder.build();

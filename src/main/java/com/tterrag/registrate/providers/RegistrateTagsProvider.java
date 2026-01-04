@@ -4,13 +4,11 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Registry;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.tags.IntrinsicHolderTagsProvider;
-import net.minecraft.data.tags.KeyTagProvider;
-import net.minecraft.data.tags.TagAppender;
 import net.minecraft.data.tags.TagsProvider;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.tags.TagBuilder;
 import net.minecraft.tags.TagKey;
 import net.neoforged.fml.LogicalSide;
+import net.neoforged.neoforge.common.data.ExistingFileHelper;
 
 import com.tterrag.registrate.AbstractRegistrate;
 
@@ -19,30 +17,20 @@ import java.util.function.Function;
 
 public interface RegistrateTagsProvider<T> extends RegistrateLookupFillerProvider {
 
+    TagsProvider.TagAppender<T> addTag(TagKey<T> tag);
+
     CompletableFuture<TagsProvider.TagLookup<T>> contentsGetter();
 
     ResourceKey<? extends Registry<T>> registry();
 
-    TagBuilder rawBuilder(TagKey<T> key);
-
-    interface Key<T> extends RegistrateTagsProvider<T> {
-
-        TagAppender<ResourceKey<T>, T> tag(TagKey<T> key);
-    }
-
-    interface Intrinsic<T> extends RegistrateTagsProvider<T> {
-
-        TagAppender<T, T> tag(TagKey<T> key);
-    }
-
-    class Impl<T> extends KeyTagProvider<T> implements RegistrateTagsProvider.Key<T> {
+    class Impl<T> extends TagsProvider<T> implements RegistrateTagsProvider<T> {
 
         private final AbstractRegistrate<?> owner;
         private final ProviderType<? extends Impl<T>> type;
         private final String name;
 
-        public Impl(AbstractRegistrate<?> owner, ProviderType<? extends Impl<T>> type, String name, PackOutput packOutput, ResourceKey<? extends Registry<T>> registryIn, CompletableFuture<HolderLookup.Provider> registriesLookup) {
-            super(packOutput, registryIn, registriesLookup, owner.getModid());
+        public Impl(AbstractRegistrate<?> owner, ProviderType<? extends Impl<T>> type, String name, PackOutput packOutput, ResourceKey<? extends Registry<T>> registryIn, CompletableFuture<HolderLookup.Provider> registriesLookup, ExistingFileHelper existingFileHelper) {
+            super(packOutput, registryIn, registriesLookup, owner.getModid(), existingFileHelper);
 
             this.owner = owner;
             this.type = type;
@@ -65,13 +53,8 @@ public interface RegistrateTagsProvider<T> extends RegistrateLookupFillerProvide
         }
 
         @Override
-        public TagBuilder rawBuilder(final TagKey<T> key) {
-            return super.getOrCreateRawBuilder(key);
-        }
-
-        @Override
-        public TagAppender<ResourceKey<T>, T> tag(TagKey<T> key) {
-            return super.tag(key);
+        public TagAppender<T> addTag(TagKey<T> tag) {
+            return super.tag(tag);
         }
 
         @Override
@@ -85,14 +68,14 @@ public interface RegistrateTagsProvider<T> extends RegistrateLookupFillerProvide
         }
     }
 
-    class IntrinsicImpl<T> extends IntrinsicHolderTagsProvider<T> implements RegistrateTagsProvider.Intrinsic<T> {
+    class IntrinsicImpl<T> extends IntrinsicHolderTagsProvider<T> implements RegistrateTagsProvider<T> {
 
         private final AbstractRegistrate<?> owner;
         private final ProviderType<? extends IntrinsicImpl<T>> type;
         private final String name;
 
-        public IntrinsicImpl(AbstractRegistrate<?> owner, ProviderType<? extends IntrinsicImpl<T>> type, String name, PackOutput packOutput, ResourceKey<? extends Registry<T>> registryIn, CompletableFuture<HolderLookup.Provider> registriesLookup, Function<T, ResourceKey<T>> keyExtractor) {
-            super(packOutput, registryIn, registriesLookup, keyExtractor, owner.getModid());
+        public IntrinsicImpl(AbstractRegistrate<?> owner, ProviderType<? extends IntrinsicImpl<T>> type, String name, PackOutput packOutput, ResourceKey<? extends Registry<T>> registryIn, CompletableFuture<HolderLookup.Provider> registriesLookup, Function<T, ResourceKey<T>> keyExtractor, ExistingFileHelper existingFileHelper) {
+            super(packOutput, registryIn, registriesLookup, keyExtractor, owner.getModid(), existingFileHelper);
 
             this.owner = owner;
             this.type = type;
@@ -115,13 +98,8 @@ public interface RegistrateTagsProvider<T> extends RegistrateLookupFillerProvide
         }
 
         @Override
-        public TagBuilder rawBuilder(TagKey<T> key) {
-            return super.getOrCreateRawBuilder(key);
-        }
-
-        @Override
-        public TagAppender<T, T> tag(final TagKey<T> key) {
-            return super.tag(key);
+        public IntrinsicTagAppender<T> addTag(TagKey<T> tag) {
+            return super.tag(tag);
         }
 
         @Override
