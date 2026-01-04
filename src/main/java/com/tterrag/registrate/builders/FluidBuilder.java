@@ -17,7 +17,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.common.util.Lazy;
 import net.neoforged.neoforge.fluids.BaseFlowingFluid;
 import net.neoforged.neoforge.fluids.FluidType;
@@ -44,7 +46,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
@@ -55,7 +56,48 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
     @FunctionalInterface
     public interface FluidTypeFactory {
 
-        FluidType create(FluidType.Properties properties, ResourceLocation stillTexture, ResourceLocation flowingTexture);
+        FluidType create(FluidType.Properties properties);
+    }
+
+    @FunctionalInterface
+    public interface FluidFactory<T> {
+
+        T create(BaseFlowingFluid.Properties properties);
+    }
+
+    @Nullable
+    private NonNullSupplier<Supplier<IClientFluidTypeExtensions>> clientExtension;
+
+    /**
+     * Register a client extension for this block. The {@link IClientBlockExtensions} instance can be shared across many
+     * items.
+     *
+     * @param clientExtension
+     *                        The client extension to register for this block
+     * @return this {@link BlockBuilder}
+     */
+    public FluidBuilder<T, P> clientExtension(NonNullSupplier<Supplier<IClientFluidTypeExtensions>> clientExtension) {
+        if (this.clientExtension == null) {
+            RegistrateDistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> this::registerClientExtension);
+        }
+        this.clientExtension = clientExtension;
+        return this;
+    }
+
+    public FluidBuilder<T, P> clientExtension(ResourceLocation stillTexture, ResourceLocation flowingTexture) {
+        this.stillTexture = stillTexture;
+        return clientExtension(() -> () -> new DefaultFluidTypeExtension(stillTexture, flowingTexture));
+    }
+
+    private ResourceLocation stillTexture;
+
+    protected void registerClientExtension() {
+        OneTimeEventReceiver.addModListener(getOwner(), RegisterClientExtensionsEvent.class, e -> {
+            NonNullSupplier<Supplier<IClientFluidTypeExtensions>> clientExtension = this.clientExtension;
+            if (clientExtension != null) {
+                e.registerFluidType(clientExtension.get().get(), fluidType.get());
+            }
+        });
     }
 
     /**
@@ -63,25 +105,20 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
      * and fluid class ({@link BaseFlowingFluid.Flowing}).
      *
      * @param <P>
-     *                       Parent object type
+     *                 Parent object type
      * @param owner
-     *                       The owning {@link AbstractRegistrate} object
+     *                 The owning {@link AbstractRegistrate} object
      * @param parent
-     *                       The parent object
+     *                 The parent object
      * @param name
-     *                       Name of the entry being built
+     *                 Name of the entry being built
      * @param callback
-     *                       A callback used to actually register the built entry
-     * @param stillTexture
-     *                       The texture to use for still fluids
-     * @param flowingTexture
-     *                       The texture to use for flowing fluids
+     *                 A callback used to actually register the built entry
      * @return A new {@link FluidBuilder} with reasonable default data generators.
-     * @see #create(AbstractRegistrate, Object, String, BuilderCallback, ResourceLocation, ResourceLocation,
-     *      FluidTypeFactory, NonNullFunction)
+     * @see #create(AbstractRegistrate, Object, String, BuilderCallback, FluidTypeFactory, FluidFactory)
      */
-    public static <P> FluidBuilder<BaseFlowingFluid.Flowing, P> create(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, ResourceLocation stillTexture, ResourceLocation flowingTexture) {
-        return create(owner, parent, name, callback, stillTexture, flowingTexture, FluidBuilder::defaultFluidType, BaseFlowingFluid.Flowing::new);
+    public static <P> FluidBuilder<BaseFlowingFluid.Flowing, P> create(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback) {
+        return create(owner, parent, name, callback, FluidType::new, BaseFlowingFluid.Flowing::new);
     }
 
     /**
@@ -89,27 +126,22 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
      * ({@link BaseFlowingFluid.Flowing}).
      *
      * @param <P>
-     *                       Parent object type
+     *                    Parent object type
      * @param owner
-     *                       The owning {@link AbstractRegistrate} object
+     *                    The owning {@link AbstractRegistrate} object
      * @param parent
-     *                       The parent object
+     *                    The parent object
      * @param name
-     *                       Name of the entry being built
+     *                    Name of the entry being built
      * @param callback
-     *                       A callback used to actually register the built entry
-     * @param stillTexture
-     *                       The texture to use for still fluids
+     *                    A callback used to actually register the built entry
      * @param typeFactory
-     *                       A factory that creates the fluid type
-     * @param flowingTexture
-     *                       The texture to use for flowing fluids
+     *                    A factory that creates the fluid type
      * @return A new {@link FluidBuilder} with reasonable default data generators.
-     * @see #create(AbstractRegistrate, Object, String, BuilderCallback, ResourceLocation, ResourceLocation,
-     *      FluidTypeFactory, NonNullFunction)
+     * @see #create(AbstractRegistrate, Object, String, BuilderCallback, FluidTypeFactory, FluidFactory)
      */
-    public static <P> FluidBuilder<BaseFlowingFluid.Flowing, P> create(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, ResourceLocation stillTexture, ResourceLocation flowingTexture, FluidTypeFactory typeFactory) {
-        return create(owner, parent, name, callback, stillTexture, flowingTexture, typeFactory, BaseFlowingFluid.Flowing::new);
+    public static <P> FluidBuilder<BaseFlowingFluid.Flowing, P> create(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, FluidTypeFactory typeFactory) {
+        return create(owner, parent, name, callback, typeFactory, BaseFlowingFluid.Flowing::new);
     }
 
     /**
@@ -117,27 +149,22 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
      * ({@link BaseFlowingFluid.Flowing}).
      *
      * @param <P>
-     *                       Parent object type
+     *                  Parent object type
      * @param owner
-     *                       The owning {@link AbstractRegistrate} object
+     *                  The owning {@link AbstractRegistrate} object
      * @param parent
-     *                       The parent object
+     *                  The parent object
      * @param name
-     *                       Name of the entry being built
+     *                  Name of the entry being built
      * @param callback
-     *                       A callback used to actually register the built entry
-     * @param stillTexture
-     *                       The texture to use for still fluids
+     *                  A callback used to actually register the built entry
      * @param fluidType
-     *                       An existing and registered fluid type.
-     * @param flowingTexture
-     *                       The texture to use for flowing fluids
+     *                  An existing and registered fluid type.
      * @return A new {@link FluidBuilder} with reasonable default data generators.
-     * @see #create(AbstractRegistrate, Object, String, BuilderCallback, ResourceLocation, ResourceLocation,
-     *      FluidTypeFactory, NonNullFunction)
+     * @see #create(AbstractRegistrate, Object, String, BuilderCallback, FluidTypeFactory, FluidFactory)
      */
-    public static <P> FluidBuilder<BaseFlowingFluid.Flowing, P> create(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, ResourceLocation stillTexture, ResourceLocation flowingTexture, NonNullSupplier<FluidType> fluidType) {
-        return create(owner, parent, name, callback, stillTexture, flowingTexture, fluidType, BaseFlowingFluid.Flowing::new);
+    public static <P> FluidBuilder<BaseFlowingFluid.Flowing, P> create(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, NonNullSupplier<FluidType> fluidType) {
+        return create(owner, parent, name, callback, p -> fluidType.get(), BaseFlowingFluid.Flowing::new);
     }
 
     /**
@@ -145,28 +172,24 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
      * and fluid class ({@link BaseFlowingFluid.Flowing}).
      *
      * @param <T>
-     *                       The type of the builder
+     *                     The type of the builder
      * @param <P>
-     *                       Parent object type
+     *                     Parent object type
      * @param owner
-     *                       The owning {@link AbstractRegistrate} object
+     *                     The owning {@link AbstractRegistrate} object
      * @param parent
-     *                       The parent object
+     *                     The parent object
      * @param name
-     *                       Name of the entry being built
+     *                     Name of the entry being built
      * @param callback
-     *                       A callback used to actually register the built entry
-     * @param stillTexture
-     *                       The texture to use for still fluids
-     * @param flowingTexture
-     *                       The texture to use for flowing fluids
+     *                     A callback used to actually register the built entry
      * @param fluidFactory
-     *                       A factory that creates the flowing fluid
+     *                     A factory that creates the flowing fluid
      * @return A new {@link FluidBuilder} with reasonable default data generators.
      */
-    public static <T extends BaseFlowingFluid, P> FluidBuilder<T, P> create(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, ResourceLocation stillTexture, ResourceLocation flowingTexture,
-                                                                            NonNullFunction<BaseFlowingFluid.Properties, T> fluidFactory) {
-        return create(owner, parent, name, callback, stillTexture, flowingTexture, FluidBuilder::defaultFluidType, fluidFactory);
+    public static <T extends BaseFlowingFluid, P> FluidBuilder<T, P> create(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback,
+                                                                            FluidFactory<T> fluidFactory) {
+        return create(owner, parent, name, callback, FluidType::new, fluidFactory);
     }
 
     /**
@@ -184,30 +207,26 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
      * </ul>
      *
      * @param <T>
-     *                       The type of the builder
+     *                     The type of the builder
      * @param <P>
-     *                       Parent object type
+     *                     Parent object type
      * @param owner
-     *                       The owning {@link AbstractRegistrate} object
+     *                     The owning {@link AbstractRegistrate} object
      * @param parent
-     *                       The parent object
+     *                     The parent object
      * @param name
-     *                       Name of the entry being built
+     *                     Name of the entry being built
      * @param callback
-     *                       A callback used to actually register the built entry
-     * @param stillTexture
-     *                       The texture to use for still fluids
-     * @param flowingTexture
-     *                       The texture to use for flowing fluids
+     *                     A callback used to actually register the built entry
      * @param typeFactory
-     *                       A factory that creates the fluid type
+     *                     A factory that creates the fluid type
      * @param fluidFactory
-     *                       A factory that creates the flowing fluid
+     *                     A factory that creates the flowing fluid
      * @return A new {@link FluidBuilder} with reasonable default data generators.
      */
-    public static <T extends BaseFlowingFluid, P> FluidBuilder<T, P> create(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, ResourceLocation stillTexture, ResourceLocation flowingTexture,
-                                                                            FluidTypeFactory typeFactory, NonNullFunction<BaseFlowingFluid.Properties, T> fluidFactory) {
-        FluidBuilder<T, P> ret = new FluidBuilder<>(owner, parent, name, callback, stillTexture, flowingTexture, typeFactory, fluidFactory)
+    public static <T extends BaseFlowingFluid, P> FluidBuilder<T, P> create(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback,
+                                                                            FluidTypeFactory typeFactory, FluidFactory<T> fluidFactory) {
+        FluidBuilder<T, P> ret = new FluidBuilder<>(owner, parent, name, callback, typeFactory, fluidFactory)
                 .defaultLang().defaultSource().defaultBlock().defaultBucket();
         return ret;
     }
@@ -227,38 +246,32 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
      * </ul>
      *
      * @param <T>
-     *                       The type of the builder
+     *                     The type of the builder
      * @param <P>
-     *                       Parent object type
+     *                     Parent object type
      * @param owner
-     *                       The owning {@link AbstractRegistrate} object
+     *                     The owning {@link AbstractRegistrate} object
      * @param parent
-     *                       The parent object
+     *                     The parent object
      * @param name
-     *                       Name of the entry being built
+     *                     Name of the entry being built
      * @param callback
-     *                       A callback used to actually register the built entry
-     * @param stillTexture
-     *                       The texture to use for still fluids
-     * @param flowingTexture
-     *                       The texture to use for flowing fluids
+     *                     A callback used to actually register the built entry
      * @param fluidType
-     *                       An existing and registered fluid type
+     *                     An existing and registered fluid type
      * @param fluidFactory
-     *                       A factory that creates the flowing fluid
+     *                     A factory that creates the flowing fluid
      * @return A new {@link FluidBuilder} with reasonable default data generators.
      */
-    public static <T extends BaseFlowingFluid, P> FluidBuilder<T, P> create(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, ResourceLocation stillTexture, ResourceLocation flowingTexture,
-                                                                            NonNullSupplier<FluidType> fluidType, NonNullFunction<BaseFlowingFluid.Properties, T> fluidFactory) {
-        FluidBuilder<T, P> ret = new FluidBuilder<>(owner, parent, name, callback, stillTexture, flowingTexture, fluidType, fluidFactory)
+    public static <T extends BaseFlowingFluid, P> FluidBuilder<T, P> create(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback,
+                                                                            NonNullSupplier<FluidType> fluidType, FluidFactory<T> fluidFactory) {
+        return new FluidBuilder<>(owner, parent, name, callback, fluidType, fluidFactory)
                 .defaultLang().defaultSource().defaultBlock().defaultBucket();
-        return ret;
     }
 
     private final String sourceName, bucketName;
 
-    private final ResourceLocation stillTexture, flowingTexture;
-    private final NonNullFunction<BaseFlowingFluid.Properties, T> fluidFactory;
+    private final FluidFactory<T> fluidFactory;
 
     @Nullable
     private final NonNullSupplier<FluidType> fluidType;
@@ -278,14 +291,12 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
     private NonNullSupplier<? extends BaseFlowingFluid> source;
     private final List<TagKey<Fluid>> tags = new ArrayList<>();
 
-    public FluidBuilder(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, ResourceLocation stillTexture, ResourceLocation flowingTexture, FluidTypeFactory typeFactory, NonNullFunction<BaseFlowingFluid.Properties, T> fluidFactory) {
+    public FluidBuilder(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, FluidTypeFactory typeFactory, FluidFactory<T> fluidFactory) {
         super(owner, parent, "flowing_" + name, callback, Registries.FLUID);
         this.sourceName = name;
         this.bucketName = name + "_bucket";
-        this.stillTexture = stillTexture;
-        this.flowingTexture = flowingTexture;
         this.fluidFactory = fluidFactory;
-        this.fluidType = NonNullSupplier.lazy(() -> typeFactory.create(makeTypeProperties(), this.stillTexture, this.flowingTexture));
+        this.fluidType = NonNullSupplier.lazy(() -> typeFactory.create(makeTypeProperties()));
         this.registerType = true;
 
         String bucketName = this.bucketName;
@@ -293,12 +304,10 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
                 .block(() -> owner.<Block, LiquidBlock>get(name, Registries.BLOCK).get());
     }
 
-    public FluidBuilder(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, ResourceLocation stillTexture, ResourceLocation flowingTexture, NonNullSupplier<FluidType> fluidType, NonNullFunction<BaseFlowingFluid.Properties, T> fluidFactory) {
+    public FluidBuilder(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, NonNullSupplier<FluidType> fluidType, FluidFactory<T> fluidFactory) {
         super(owner, parent, "flowing_" + name, callback, Registries.FLUID);
         this.sourceName = name;
         this.bucketName = name + "_bucket";
-        this.stillTexture = stillTexture;
-        this.flowingTexture = flowingTexture;
         this.fluidFactory = fluidFactory;
         this.fluidType = fluidType;
         this.registerType = false; // Don't register if we have a fluid from outside.
@@ -606,7 +615,7 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
 
     @Override
     protected T createEntry() {
-        return fluidFactory.apply(makeProperties());
+        return fluidFactory.create(makeProperties());
     }
 
     /**
@@ -652,25 +661,23 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
         return new FluidEntry<>(getOwner(), delegate);
     }
 
-    // Basic default fluid type implementation.
-    private static FluidType defaultFluidType(FluidType.Properties properties, ResourceLocation stillTexture, ResourceLocation flowingTexture) {
-        return new FluidType(properties) {
+    public static class DefaultFluidTypeExtension implements IClientFluidTypeExtensions {
 
-            @Override
-            public void initializeClient(Consumer<IClientFluidTypeExtensions> consumer) {
-                consumer.accept(new IClientFluidTypeExtensions() {
+        private final ResourceLocation stillTexture, flowingTexture;
 
-                    @Override
-                    public ResourceLocation getStillTexture() {
-                        return stillTexture;
-                    }
+        public DefaultFluidTypeExtension(ResourceLocation stillTexture, ResourceLocation flowingTexture) {
+            this.stillTexture = stillTexture;
+            this.flowingTexture = flowingTexture;
+        }
 
-                    @Override
-                    public ResourceLocation getFlowingTexture() {
-                        return flowingTexture;
-                    }
-                });
-            }
-        };
+        @Override
+        public ResourceLocation getStillTexture() {
+            return stillTexture;
+        }
+
+        @Override
+        public ResourceLocation getFlowingTexture() {
+            return flowingTexture;
+        }
     }
 }
