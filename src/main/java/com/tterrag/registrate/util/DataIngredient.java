@@ -1,11 +1,11 @@
 package com.tterrag.registrate.util;
 
 import net.minecraft.advancements.Criterion;
-import net.minecraft.advancements.critereon.InventoryChangeTrigger;
-import net.minecraft.advancements.critereon.ItemPredicate;
+import net.minecraft.advancements.criterion.InventoryChangeTrigger;
+import net.minecraft.advancements.criterion.ItemPredicate;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -35,7 +35,7 @@ public final class DataIngredient {
     // TODO <1.21.4> removed delegate. Is there a need to add it back?
     private final Ingredient parent;
     @Getter
-    private final ResourceLocation id;
+    private final Identifier id;
     private final Function<RegistrateRecipeProvider, Criterion<InventoryChangeTrigger.TriggerInstance>> criteriaFactory;
 
     private DataIngredient(Ingredient parent, ItemLike item) {
@@ -50,7 +50,7 @@ public final class DataIngredient {
         this.criteriaFactory = prov -> prov.has(tag);
     }
 
-    private DataIngredient(Ingredient parent, ResourceLocation id, ItemPredicate... predicates) {
+    private DataIngredient(Ingredient parent, Identifier id, ItemPredicate... predicates) {
         this.parent = parent;
         this.id = id;
         this.criteriaFactory = prov -> RegistrateRecipeProvider.inventoryTrigger(predicates);
@@ -83,7 +83,7 @@ public final class DataIngredient {
         return new DataIngredient(parent, required);
     }
 
-    public static DataIngredient ingredient(Ingredient parent, ResourceLocation id, ItemPredicate... criteria) {
+    public static DataIngredient ingredient(Ingredient parent, Identifier id, ItemPredicate... criteria) {
         return new DataIngredient(parent, id, criteria);
     }
 

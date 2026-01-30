@@ -7,12 +7,12 @@ import net.minecraft.data.PackOutput;
 import net.minecraft.data.loot.LootTableProvider;
 import net.minecraft.data.loot.LootTableSubProvider;
 import net.minecraft.data.loot.packs.VanillaLootTableProvider;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.context.ContextKeySet;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.ValidationContext;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.neoforged.fml.LogicalSide;
 import net.neoforged.fml.util.ObfuscationReflectionHelper;
@@ -91,8 +91,8 @@ public class RegistrateLootTableProvider extends LootTableProvider implements Re
     }
 
     @Override
-    protected void validate(WritableRegistry<LootTable> writableregistry, ValidationContext validationcontext, ProblemReporter.Collector problemreporter$collector) {
-        currentLootCreators.forEach(c -> c.validate(writableregistry, validationcontext));
+    protected void validate(WritableRegistry<LootTable> writableregistry, ValidationContextSource validationContext, ProblemReporter.Collector problems) {
+        currentLootCreators.forEach(c -> c.validate(writableregistry, validationContext));
     }
 
     @SuppressWarnings("unchecked")
@@ -110,7 +110,7 @@ public class RegistrateLootTableProvider extends LootTableProvider implements Re
         return creator;
     }
 
-    private static final BiMap<ResourceLocation, ContextKeySet> SET_REGISTRY = ObfuscationReflectionHelper.getPrivateValue(LootContextParamSets.class, null, "REGISTRY");
+    private static final BiMap<Identifier, ContextKeySet> SET_REGISTRY = ObfuscationReflectionHelper.getPrivateValue(LootContextParamSets.class, null, "REGISTRY");
 
     @Override
     public List<LootTableProvider.SubProviderEntry> getTables() {

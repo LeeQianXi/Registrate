@@ -1,23 +1,23 @@
 package com.tterrag.registrate.providers.generators;
 
 import net.minecraft.advancements.Criterion;
-import net.minecraft.advancements.critereon.EnterBlockTrigger;
-import net.minecraft.advancements.critereon.InventoryChangeTrigger;
-import net.minecraft.advancements.critereon.ItemPredicate;
-import net.minecraft.advancements.critereon.MinMaxBounds;
+import net.minecraft.advancements.criterion.EnterBlockTrigger;
+import net.minecraft.advancements.criterion.InventoryChangeTrigger;
+import net.minecraft.advancements.criterion.ItemPredicate;
+import net.minecraft.advancements.criterion.MinMaxBounds;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.BlockFamily;
 import net.minecraft.data.recipes.*;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.item.equipment.trim.TrimPattern;
 import net.minecraft.world.level.ItemLike;
@@ -85,20 +85,20 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
         return registries.lookupOrThrow(key.registryKey()).getOrThrow(key);
     }
 
-    public ResourceLocation safeId(ResourceLocation id) {
-        return ResourceLocation.fromNamespaceAndPath(runner.owner.getModid(), safeName(id));
+    public Identifier safeId(Identifier id) {
+        return Identifier.fromNamespaceAndPath(runner.owner.getModid(), safeName(id));
     }
 
-    public ResourceLocation safeId(DataIngredient source) {
+    public Identifier safeId(DataIngredient source) {
         return safeId(source.getId());
     }
 
-    public ResourceLocation safeId(ItemLike registryEntry) {
+    public Identifier safeId(ItemLike registryEntry) {
         return safeId(BuiltInRegistries.ITEM.getKey(registryEntry.asItem()));
     }
 
-    public ResourceKey<Recipe<?>> safeKey(ResourceLocation id) {
-        return ResourceKey.create(Registries.RECIPE, ResourceLocation.fromNamespaceAndPath(runner.owner.getModid(), safeName(id)));
+    public ResourceKey<Recipe<?>> safeKey(Identifier id) {
+        return ResourceKey.create(Registries.RECIPE, Identifier.fromNamespaceAndPath(runner.owner.getModid(), safeName(id)));
     }
 
     public ResourceKey<Recipe<?>> safeKey(DataIngredient source) {
@@ -109,7 +109,7 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
         return safeKey(BuiltInRegistries.ITEM.getKey(registryEntry.asItem()));
     }
 
-    public String safeName(ResourceLocation id) {
+    public String safeName(Identifier id) {
         return id.getPath().replace('/', '_');
     }
 
@@ -133,46 +133,46 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
             .put(RecipeSerializer.CAMPFIRE_COOKING_RECIPE, "campfire")
             .build();
 
-    public <T extends ItemLike, S extends AbstractCookingRecipe> void cooking(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, float experience, int cookingTime, RecipeSerializer<S> serializer, AbstractCookingRecipe.Factory<S> factory) {
-        cooking(source, category, result, experience, cookingTime, COOKING_TYPE_NAMES.get(serializer), serializer, factory);
+    public <T extends ItemLike, S extends AbstractCookingRecipe> void cooking(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience, int cookingTime, RecipeSerializer<S> serializer, AbstractCookingRecipe.Factory<S> factory) {
+        cooking(source, category, cookingBookCategory, result, experience, cookingTime, COOKING_TYPE_NAMES.get(serializer), factory);
     }
 
-    public <T extends ItemLike, S extends AbstractCookingRecipe> void cooking(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, float experience, int cookingTime, String typeName, RecipeSerializer<S> serializer, AbstractCookingRecipe.Factory<S> factory) {
-        SimpleCookingRecipeBuilder.generic(source.toVanilla(), category, result.get(), experience, cookingTime, serializer, factory)
+    public <T extends ItemLike, S extends AbstractCookingRecipe> void cooking(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience, int cookingTime, String typeName, AbstractCookingRecipe.Factory<S> factory) {
+        SimpleCookingRecipeBuilder.generic(source.toVanilla(), category, cookingBookCategory, result.get(), experience, cookingTime, factory)
                 .unlockedBy("has_" + safeName(source), source.getCriterion(this))
                 .save(this, safeId(result.get()) + "_from_" + safeName(source) + "_" + typeName);
     }
 
-    public <T extends ItemLike> void smelting(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, float experience) {
-        smelting(source, category, result, experience, DEFAULT_SMELT_TIME);
+    public <T extends ItemLike> void smelting(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience) {
+        smelting(source, category, cookingBookCategory, result, experience, DEFAULT_SMELT_TIME);
     }
 
-    public <T extends ItemLike> void smelting(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, float experience, int cookingTime) {
-        cooking(source, category, result, experience, cookingTime, RecipeSerializer.SMELTING_RECIPE, SmeltingRecipe::new);
+    public <T extends ItemLike> void smelting(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience, int cookingTime) {
+        cooking(source, category, cookingBookCategory, result, experience, cookingTime, RecipeSerializer.SMELTING_RECIPE, SmeltingRecipe::new);
     }
 
-    public <T extends ItemLike> void blasting(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, float experience) {
-        blasting(source, category, result, experience, DEFAULT_BLAST_TIME);
+    public <T extends ItemLike> void blasting(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience) {
+        blasting(source, category, cookingBookCategory, result, experience, DEFAULT_BLAST_TIME);
     }
 
-    public <T extends ItemLike> void blasting(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, float experience, int cookingTime) {
-        cooking(source, category, result, experience, cookingTime, RecipeSerializer.BLASTING_RECIPE, BlastingRecipe::new);
+    public <T extends ItemLike> void blasting(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience, int cookingTime) {
+        cooking(source, category, cookingBookCategory, result, experience, cookingTime, RecipeSerializer.BLASTING_RECIPE, BlastingRecipe::new);
     }
 
-    public <T extends ItemLike> void smoking(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, float experience) {
-        smoking(source, category, result, experience, DEFAULT_SMOKE_TIME);
+    public <T extends ItemLike> void smoking(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience) {
+        smoking(source, category, cookingBookCategory, result, experience, DEFAULT_SMOKE_TIME);
     }
 
-    public <T extends ItemLike> void smoking(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, float experience, int cookingTime) {
-        cooking(source, category, result, experience, cookingTime, RecipeSerializer.SMOKING_RECIPE, SmokingRecipe::new);
+    public <T extends ItemLike> void smoking(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience, int cookingTime) {
+        cooking(source, category, cookingBookCategory, result, experience, cookingTime, RecipeSerializer.SMOKING_RECIPE, SmokingRecipe::new);
     }
 
-    public <T extends ItemLike> void campfire(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, float experience) {
-        campfire(source, category, result, experience, DEFAULT_CAMPFIRE_TIME);
+    public <T extends ItemLike> void campfire(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience) {
+        campfire(source, category, cookingBookCategory, result, experience, DEFAULT_CAMPFIRE_TIME);
     }
 
-    public <T extends ItemLike> void campfire(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, float experience, int cookingTime) {
-        cooking(source, category, result, experience, cookingTime, RecipeSerializer.CAMPFIRE_COOKING_RECIPE, CampfireCookingRecipe::new);
+    public <T extends ItemLike> void campfire(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience, int cookingTime) {
+        cooking(source, category, cookingBookCategory, result, experience, cookingTime, RecipeSerializer.CAMPFIRE_COOKING_RECIPE, CampfireCookingRecipe::new);
     }
 
     public <T extends ItemLike> void stonecutting(DataIngredient source, RecipeCategory category, Supplier<? extends T> result) {
@@ -185,15 +185,15 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
                 .save(this, safeId(result.get()) + "_from_" + safeName(source) + "_stonecutting");
     }
 
-    public <T extends ItemLike> void smeltingAndBlasting(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, float xp) {
-        smelting(source, category, result, xp);
-        blasting(source, category, result, xp);
+    public <T extends ItemLike> void smeltingAndBlasting(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float xp) {
+        smelting(source, category, cookingBookCategory, result, xp);
+        blasting(source, category, cookingBookCategory, result, xp);
     }
 
-    public <T extends ItemLike> void food(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, float xp) {
-        smelting(source, category, result, xp);
-        smoking(source, category, result, xp);
-        campfire(source, category, result, xp);
+    public <T extends ItemLike> void food(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float xp) {
+        smelting(source, category, cookingBookCategory, result, xp);
+        smoking(source, category, cookingBookCategory, result, xp);
+        campfire(source, category, cookingBookCategory, result, xp);
     }
 
     public <T extends ItemLike> void square(DataIngredient source, RecipeCategory category, Supplier<? extends T> output, boolean small) {
@@ -332,12 +332,12 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
     /** Generated override to expose protected method: {@link RecipeProvider#oreSmelting} */
     @Override
     @Generated(value = "com.tterrag.registrate.test.meta.UpdateRecipeProvider", date = "Sun, 20 Jul 2025 06:59:06 GMT")
-    public void oreSmelting(List<ItemLike> ingredients, RecipeCategory category, ItemLike result, float experience, int cookingTime, String group) { super.oreSmelting(ingredients, category, result, experience, cookingTime, group); }
+    public void oreSmelting(List<ItemLike> smeltables, RecipeCategory craftingCategory, CookingBookCategory cookingCategory, ItemLike result, float experience, int cookingTime, String group)  { super.oreSmelting(smeltables, craftingCategory,cookingCategory, result, experience, cookingTime, group); }
 
     /** Generated override to expose protected method: {@link RecipeProvider#oreBlasting} */
     @Override
     @Generated(value = "com.tterrag.registrate.test.meta.UpdateRecipeProvider", date = "Sun, 20 Jul 2025 06:59:06 GMT")
-    public void oreBlasting(List<ItemLike> ingredients, RecipeCategory category, ItemLike result, float experience, int cookingTime, String group) { super.oreBlasting(ingredients, category, result, experience, cookingTime, group); }
+    public void oreBlasting(List<ItemLike> smeltables, RecipeCategory craftingCategory, CookingBookCategory cookingCategory, ItemLike result, float experience, int cookingTime, String group) { super.oreBlasting(smeltables, craftingCategory,cookingCategory, result, experience, cookingTime, group); }
 
     /** Generated override to expose protected method: {@link RecipeProvider#netheriteSmithing} */
     @Override
@@ -623,7 +623,9 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
     @Generated(value = "com.tterrag.registrate.test.meta.UpdateRecipeProvider", date = "Sun, 20 Jul 2025 06:59:06 GMT")
     public Criterion<InventoryChangeTrigger.TriggerInstance> has(MinMaxBounds.Ints count, ItemLike item) { return super.has(count, item); }
 
-    /** Generated override to expose protected method: {@link RecipeProvider#has} */
+    /**
+     * Generated override to expose protected method: {@link RecipeProvider#has}
+     */
     @Override
     @Generated(value = "com.tterrag.registrate.test.meta.UpdateRecipeProvider", date = "Sun, 20 Jul 2025 06:59:06 GMT")
     public Criterion<InventoryChangeTrigger.TriggerInstance> has(ItemLike itemLike) { return super.has(itemLike); }
@@ -683,7 +685,7 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
     /** Generated override to expose protected method: {@link RecipeProvider#shapeless} */
     @Override
     @Generated(value = "com.tterrag.registrate.test.meta.UpdateRecipeProvider", date = "Sun, 20 Jul 2025 06:59:06 GMT")
-    public ShapelessRecipeBuilder shapeless(RecipeCategory category, ItemStack result) { return super.shapeless(category, result); }
+    public ShapelessRecipeBuilder shapeless(RecipeCategory category, ItemStackTemplate result) { return super.shapeless(category, result); }
 
     /** Generated override to expose protected method: {@link RecipeProvider#shapeless} */
     @Override

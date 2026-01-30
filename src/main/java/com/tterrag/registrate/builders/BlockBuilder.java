@@ -6,7 +6,7 @@ import net.minecraft.client.renderer.block.model.SingleVariant;
 import net.minecraft.client.renderer.block.model.Variant;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -138,7 +138,7 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
 
     /**
      * @deprecated Set your render type in your model's JSON
-     *             ({@link net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder#renderType(ResourceLocation)})
+     *             ({@link net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder#renderType(Identifier)})
      */
     @Deprecated(forRemoval = true)
     public BlockBuilder<T, P> addLayer(Supplier<Supplier<ChunkSectionLayer>> layer) {

@@ -1,12 +1,12 @@
 package com.tterrag.registrate.builders;
 
-import net.minecraft.Util;
 import net.minecraft.client.data.models.model.ModelTemplates;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.Util;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
@@ -81,7 +81,7 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
         return this;
     }
 
-    public FluidBuilder<T, P> clientExtension(ResourceLocation stillTexture, ResourceLocation flowingTexture) {
+    public FluidBuilder<T, P> clientExtension(Identifier stillTexture, Identifier flowingTexture) {
         return clientExtension(() -> () -> new DefaultFluidTypeExtension(stillTexture, flowingTexture));
     }
 
@@ -590,7 +590,7 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
             properties.descriptionId(block.get().get().getDescriptionId());
             setData(ProviderType.LANG, NonNullBiConsumer.noop());
         } else {
-            properties.descriptionId(Util.makeDescriptionId("fluid", ResourceLocation.fromNamespaceAndPath(getOwner().getModid(), sourceName)));
+            properties.descriptionId(Util.makeDescriptionId("fluid", Identifier.fromNamespaceAndPath(getOwner().getModid(), sourceName)));
         }
 
         return properties;
@@ -646,20 +646,20 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
 
     public static class DefaultFluidTypeExtension implements IClientFluidTypeExtensions {
 
-        private final ResourceLocation stillTexture, flowingTexture;
+        private final Identifier stillTexture, flowingTexture;
 
-        public DefaultFluidTypeExtension(ResourceLocation stillTexture, ResourceLocation flowingTexture) {
+        public DefaultFluidTypeExtension(Identifier stillTexture, Identifier flowingTexture) {
             this.stillTexture = stillTexture;
             this.flowingTexture = flowingTexture;
         }
 
         @Override
-        public ResourceLocation getStillTexture() {
+        public Identifier getStillTexture() {
             return stillTexture;
         }
 
         @Override
-        public ResourceLocation getFlowingTexture() {
+        public Identifier getFlowingTexture() {
             return flowingTexture;
         }
     }

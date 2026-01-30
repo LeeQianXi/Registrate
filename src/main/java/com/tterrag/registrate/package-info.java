@@ -1,4 +1,4 @@
 @javax.annotation.ParametersAreNonnullByDefault
-@net.minecraft.MethodsReturnNonnullByDefault
+@com.mojang.logging.annotations.MethodsReturnNonnullByDefault
 @com.tterrag.registrate.util.nullness.FieldsAreNonnullByDefault
 package com.tterrag.registrate;

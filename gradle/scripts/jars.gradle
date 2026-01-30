@@ -11,6 +11,7 @@ afterEvaluate {
                 'Specification-Version': mod_version,
                 'Implementation-Title': base.archivesName,
                 'Implementation-Version': version,
+                "Automatic-Module-Name": mod_name
         ])
     }
 }

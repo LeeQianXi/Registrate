@@ -118,7 +118,7 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
      * @return this {@link EntityBuilder}
      */
     public EntityBuilder<T, P> renderer(NonNullSupplier<NonNullFunction<EntityRendererProvider.Context, EntityRenderer<? super T, ?>>> renderer) {
-        if (this.renderer == null && FMLEnvironment.dist.isClient()) { // First call only
+        if (this.renderer == null && FMLEnvironment.getDist().isClient()) { // First call only
             RegistrateDistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> this::registerRenderer);
         }
         this.renderer = renderer;
@@ -252,7 +252,7 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
      * return getOwner().item(this, getName() + "_spawn_egg", p -> new DeferredSpawnEggItem((Supplier<EntityType<?
      * extends Mob>>) (Supplier) sup, primaryColor, secondaryColor, p)).tab(CreativeModeTabs.SPAWN_EGGS)
      * .model((ctx, prov) -> prov.withExistingParent(ctx.getName(),
-     * ResourceLocation.withDefaultNamespace("item/template_spawn_egg")));
+     * Identifier.withDefaultNamespace("item/template_spawn_egg")));
      * }
      */
 
@@ -264,6 +264,7 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
      *
      * @return this {@link EntityBuilder}
      */
+    @Deprecated
     public EntityBuilder<T, P> defaultLang() {
         return lang(EntityType::getDescriptionId);
     }

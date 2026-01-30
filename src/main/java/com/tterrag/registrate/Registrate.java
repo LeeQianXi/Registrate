@@ -16,18 +16,18 @@ public class Registrate extends AbstractRegistrate<Registrate> {
      * of adding side-effects to constructor, so that alternate initialization
      * strategies can be done in subclasses.
      * 
-     * @param modid
+     * @param modId
      *              The mod ID for which objects will be registered
      * @return The {@link Registrate} instance
      */
-    public static Registrate create(String modid) {
-        var ret = new Registrate(modid);
+    public static Registrate create(String modId) {
+        var ret = new Registrate(modId);
 
-        Optional<IEventBus> modEventBus = ModList.get().getModContainerById(modid)
+        Optional<IEventBus> modEventBus = ModList.get().getModContainerById(modId)
                 .map(ModContainer::getEventBus);
 
         modEventBus.ifPresentOrElse(ret::registerEventListeners, () -> {
-            String message = "# [Registrate] Failed to register eventListeners for mod " + modid + ", This should be reported to this mod's dev #";
+            String message = "# [Registrate] Failed to register eventListeners for mod " + modId + ", This should be reported to this mod's dev #";
 
             StringBuilder hashtags = new StringBuilder().append("#".repeat(message.length()));
 
