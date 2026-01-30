@@ -1,7 +1,9 @@
 modLoader="javafml"
 
-loaderVersion="${loader_version_range}"
 license="${mod_license}"
+
+[[accessTransformers]]
+file="META-INF/accesstransformer.cfg"
 
 [[mods]]
 modId="${mod_id}"
@@ -14,13 +16,13 @@ lombok = "8.20"
 [[dependencies.${mod_id}]]
 modId="neoforge"
 type="required"
-versionRange="${neo_version_range}"
+versionRange="[${neo_version},)"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
 modId="minecraft"
 type="required"
-versionRange="${minecraft_version_range}"
+versionRange="[${minecraft_version}]"
 ordering="NONE"
 side="BOTH"
