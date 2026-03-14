@@ -3,11 +3,11 @@ package com.tterrag.registrate.providers.generators;
 import net.minecraft.client.data.models.model.ModelInstance;
 import net.minecraft.client.data.models.model.TextureMapping;
 import net.minecraft.client.data.models.model.TextureSlot;
+import net.minecraft.client.renderer.block.model.Material;
 import net.minecraft.client.resources.model.UnbakedModel;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.client.event.RegisterNamedRenderTypesEvent;
 import net.neoforged.neoforge.client.model.generators.template.CustomLoaderBuilder;
 import net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder;
 import net.neoforged.neoforge.client.model.generators.template.RootTransformsBuilder;
@@ -31,7 +31,7 @@ public class RegistrateLegacyBlockModelBuilder {
 
     public RegistrateLegacyBlockModelBuilder texture(TextureSlot slot, Identifier texture) {
         this.template.requiredTextureSlot(slot);
-        this.texture.put(slot, texture);
+        this.texture.put(slot, new Material(texture));
         return this;
     }
 
@@ -68,32 +68,6 @@ public class RegistrateLegacyBlockModelBuilder {
      */
     public RegistrateLegacyBlockModelBuilder suffix(String suffix) {
         template.suffix(suffix);
-        return this;
-    }
-
-    /**
-     * Set the render type for this model.
-     *
-     * @param renderType the render type. Must be registered via
-     *                   {@link RegisterNamedRenderTypesEvent}
-     * @return this builder
-     * @throws NullPointerException if {@code renderType} is {@code null}
-     */
-    public RegistrateLegacyBlockModelBuilder renderType(String renderType) {
-        template.renderType(renderType);
-        return this;
-    }
-
-    /**
-     * Set the render type for this model.
-     *
-     * @param renderType the render type. Must be registered via
-     *                   {@link RegisterNamedRenderTypesEvent}
-     * @return this builder
-     * @throws NullPointerException if {@code renderType} is {@code null}
-     */
-    public RegistrateLegacyBlockModelBuilder renderType(Identifier renderType) {
-        template.renderType(renderType);
         return this;
     }
 

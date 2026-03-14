@@ -127,10 +127,10 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
     public static final int DEFAULT_CAMPFIRE_TIME = DEFAULT_SMELT_TIME * 3;
 
     private static final ImmutableMap<RecipeSerializer<? extends AbstractCookingRecipe>, String> COOKING_TYPE_NAMES = ImmutableMap.<RecipeSerializer<? extends AbstractCookingRecipe>, String>builder()
-            .put(RecipeSerializer.SMELTING_RECIPE, "smelting")
-            .put(RecipeSerializer.BLASTING_RECIPE, "blasting")
-            .put(RecipeSerializer.SMOKING_RECIPE, "smoking")
-            .put(RecipeSerializer.CAMPFIRE_COOKING_RECIPE, "campfire")
+            .put(SmeltingRecipe.SERIALIZER, "smelting")
+            .put(BlastingRecipe.SERIALIZER, "blasting")
+            .put(SmokingRecipe.SERIALIZER, "smoking")
+            .put(CampfireCookingRecipe.SERIALIZER, "campfire")
             .build();
 
     public <T extends ItemLike, S extends AbstractCookingRecipe> void cooking(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience, int cookingTime, RecipeSerializer<S> serializer, AbstractCookingRecipe.Factory<S> factory) {
@@ -148,7 +148,7 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
     }
 
     public <T extends ItemLike> void smelting(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience, int cookingTime) {
-        cooking(source, category, cookingBookCategory, result, experience, cookingTime, RecipeSerializer.SMELTING_RECIPE, SmeltingRecipe::new);
+        cooking(source, category, cookingBookCategory, result, experience, cookingTime, SmeltingRecipe.SERIALIZER, SmeltingRecipe::new);
     }
 
     public <T extends ItemLike> void blasting(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience) {
@@ -156,7 +156,7 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
     }
 
     public <T extends ItemLike> void blasting(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience, int cookingTime) {
-        cooking(source, category, cookingBookCategory, result, experience, cookingTime, RecipeSerializer.BLASTING_RECIPE, BlastingRecipe::new);
+        cooking(source, category, cookingBookCategory, result, experience, cookingTime, BlastingRecipe.SERIALIZER, BlastingRecipe::new);
     }
 
     public <T extends ItemLike> void smoking(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience) {
@@ -164,7 +164,7 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
     }
 
     public <T extends ItemLike> void smoking(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience, int cookingTime) {
-        cooking(source, category, cookingBookCategory, result, experience, cookingTime, RecipeSerializer.SMOKING_RECIPE, SmokingRecipe::new);
+        cooking(source, category, cookingBookCategory, result, experience, cookingTime, SmokingRecipe.SERIALIZER, SmokingRecipe::new);
     }
 
     public <T extends ItemLike> void campfire(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience) {
@@ -172,14 +172,14 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
     }
 
     public <T extends ItemLike> void campfire(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, float experience, int cookingTime) {
-        cooking(source, category, cookingBookCategory, result, experience, cookingTime, RecipeSerializer.CAMPFIRE_COOKING_RECIPE, CampfireCookingRecipe::new);
+        cooking(source, category, cookingBookCategory, result, experience, cookingTime, CampfireCookingRecipe.SERIALIZER, CampfireCookingRecipe::new);
     }
 
-    public <T extends ItemLike> void stonecutting(DataIngredient source, RecipeCategory category, Supplier<? extends T> result) {
-        stonecutting(source, category, result, 1);
+    public <T extends ItemLike> void stonecutting(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result) {
+        stonecutting(source, category, cookingBookCategory, result, 1);
     }
 
-    public <T extends ItemLike> void stonecutting(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, int resultAmount) {
+    public <T extends ItemLike> void stonecutting(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, int resultAmount) {
         SingleItemRecipeBuilder.stonecutting(source.toVanilla(), category, result.get(), resultAmount)
                 .unlockedBy("has_" + safeName(source), source.getCriterion(this))
                 .save(this, safeId(result.get()) + "_from_" + safeName(source) + "_stonecutting");
@@ -196,7 +196,7 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
         campfire(source, category, cookingBookCategory, result, xp);
     }
 
-    public <T extends ItemLike> void square(DataIngredient source, RecipeCategory category, Supplier<? extends T> output, boolean small) {
+    public <T extends ItemLike> void square(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> output, boolean small) {
         ShapedRecipeBuilder builder = shaped(category, output.get())
                 .define('X', source.toVanilla());
         if (small) {
@@ -212,23 +212,24 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
      * @param <T>
      * @param source
      * @param output
-     * @deprecated Broken, use {@link #storage(NonNullSupplier, RecipeCategory, NonNullSupplier)} or
-     *             {@link #storage(DataIngredient, RecipeCategory, NonNullSupplier, DataIngredient, NonNullSupplier)}.
+     * @deprecated Broken, use {@link #storage(NonNullSupplier, RecipeCategory, CookingBookCategory, NonNullSupplier)}
+     *             or
+     *             {@link #storage(DataIngredient, RecipeCategory, CookingBookCategory, NonNullSupplier, DataIngredient, NonNullSupplier)}.
      */
     @Deprecated
-    public <T extends ItemLike> void storage(DataIngredient source, RecipeCategory category, NonNullSupplier<? extends T> output) {
-        square(source, category, output, false);
+    public <T extends ItemLike> void storage(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, NonNullSupplier<? extends T> output) {
+        square(source, category, cookingBookCategory, output, false);
         // This is backwards, but leaving in for binary compat
         singleItemUnfinished(source, category, output, 1, 9)
                 .save(this, safeId(source) + "_from_" + safeName(output.get()));
     }
 
-    public <T extends ItemLike> void storage(NonNullSupplier<? extends T> source, RecipeCategory category, NonNullSupplier<? extends T> output) {
-        storage(DataIngredient.items(source), category, source, DataIngredient.items(output), output);
+    public <T extends ItemLike> void storage(NonNullSupplier<? extends T> source, RecipeCategory category, CookingBookCategory cookingBookCategory, NonNullSupplier<? extends T> output) {
+        storage(DataIngredient.items(source), category, cookingBookCategory, source, DataIngredient.items(output), output);
     }
 
-    public <T extends ItemLike> void storage(DataIngredient sourceIngredient, RecipeCategory category, NonNullSupplier<? extends T> source, DataIngredient outputIngredient, NonNullSupplier<? extends T> output) {
-        square(sourceIngredient, category, output, false);
+    public <T extends ItemLike> void storage(DataIngredient sourceIngredient, RecipeCategory category, CookingBookCategory cookingBookCategory, NonNullSupplier<? extends T> source, DataIngredient outputIngredient, NonNullSupplier<? extends T> output) {
+        square(sourceIngredient, category, cookingBookCategory, output, false);
         singleItemUnfinished(outputIngredient, category, source, 1, 9)
                 .save(this, safeId(sourceIngredient) + "_from_" + safeName(output.get()));
     }
@@ -250,7 +251,7 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
                 .save(this, safeKey(result.get()));
     }
 
-    public <T extends ItemLike> void stairs(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, @Nullable String group, boolean stone) {
+    public <T extends ItemLike> void stairs(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, @Nullable String group, boolean stone) {
         shaped(category, result.get(), 4)
                 .pattern("X  ").pattern("XX ").pattern("XXX")
                 .define('X', source.toVanilla())
@@ -258,11 +259,11 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
                 .unlockedBy("has_" + safeName(source), source.getCriterion(this))
                 .save(this, safeKey(result.get()));
         if (stone) {
-            stonecutting(source, category, result);
+            stonecutting(source, category, cookingBookCategory, result);
         }
     }
 
-    public <T extends ItemLike> void slab(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, @Nullable String group, boolean stone) {
+    public <T extends ItemLike> void slab(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, @Nullable String group, boolean stone) {
         shaped(category, result.get(), 6)
                 .pattern("XXX")
                 .define('X', source.toVanilla())
@@ -270,11 +271,11 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
                 .unlockedBy("has_" + safeName(source), source.getCriterion(this))
                 .save(this, safeKey(result.get()));
         if (stone) {
-            stonecutting(source, category, result, 2);
+            stonecutting(source, category, cookingBookCategory, result, 2);
         }
     }
 
-    public <T extends ItemLike> void fence(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, @Nullable String group) {
+    public <T extends ItemLike> void fence(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, @Nullable String group) {
         shaped(category, result.get(), 3)
                 .pattern("W#W").pattern("W#W")
                 .define('W', source.toVanilla())
@@ -284,7 +285,7 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
                 .save(this, safeKey(result.get()));
     }
 
-    public <T extends ItemLike> void fenceGate(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, @Nullable String group) {
+    public <T extends ItemLike> void fenceGate(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result, @Nullable String group) {
         shaped(category, result.get())
                 .pattern("#W#").pattern("#W#")
                 .define('W', source.toVanilla())
@@ -294,13 +295,13 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
                 .save(this, safeKey(result.get()));
     }
 
-    public <T extends ItemLike> void wall(DataIngredient source, RecipeCategory category, Supplier<? extends T> result) {
+    public <T extends ItemLike> void wall(DataIngredient source, RecipeCategory category, CookingBookCategory cookingBookCategory, Supplier<? extends T> result) {
         shaped(category, result.get(), 6)
                 .pattern("XXX").pattern("XXX")
                 .define('X', source.toVanilla())
                 .unlockedBy("has_" + safeName(source), source.getCriterion(this))
                 .save(this, safeKey(result.get()));
-        stonecutting(source, category, result);
+        stonecutting(source, category, cookingBookCategory, result);
     }
 
     public <T extends ItemLike> void door(DataIngredient source, RecipeCategory category, Supplier<? extends T> result, @Nullable String group) {
@@ -332,12 +333,12 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
     /** Generated override to expose protected method: {@link RecipeProvider#oreSmelting} */
     @Override
     @Generated(value = "com.tterrag.registrate.test.meta.UpdateRecipeProvider", date = "Sun, 20 Jul 2025 06:59:06 GMT")
-    public void oreSmelting(List<ItemLike> smeltables, RecipeCategory craftingCategory, CookingBookCategory cookingCategory, ItemLike result, float experience, int cookingTime, String group)  { super.oreSmelting(smeltables, craftingCategory,cookingCategory, result, experience, cookingTime, group); }
+    public void oreSmelting(List<ItemLike> ingredients, RecipeCategory category, CookingBookCategory cookingBookCategory,ItemLike result, float experience, int cookingTime, String group) { super.oreSmelting(ingredients, category,cookingBookCategory, result, experience, cookingTime, group); }
 
     /** Generated override to expose protected method: {@link RecipeProvider#oreBlasting} */
     @Override
     @Generated(value = "com.tterrag.registrate.test.meta.UpdateRecipeProvider", date = "Sun, 20 Jul 2025 06:59:06 GMT")
-    public void oreBlasting(List<ItemLike> smeltables, RecipeCategory craftingCategory, CookingBookCategory cookingCategory, ItemLike result, float experience, int cookingTime, String group) { super.oreBlasting(smeltables, craftingCategory,cookingCategory, result, experience, cookingTime, group); }
+    public void oreBlasting(List<ItemLike> ingredients, RecipeCategory category, CookingBookCategory cookingBookCategory, ItemLike result, float experience, int cookingTime, String group) { super.oreBlasting(ingredients, category,cookingBookCategory, result, experience, cookingTime, group); }
 
     /** Generated override to expose protected method: {@link RecipeProvider#netheriteSmithing} */
     @Override
@@ -609,10 +610,10 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
     @Generated(value = "com.tterrag.registrate.test.meta.UpdateRecipeProvider", date = "Sun, 20 Jul 2025 06:59:06 GMT")
     public void generateRecipes(BlockFamily blockFamily, FeatureFlagSet requiredFeatures) { super.generateRecipes(blockFamily, requiredFeatures); }
 
-    /** Generated override to expose protected method: {@link RecipeProvider#getBaseBlock} */
+    /** Generated override to expose protected method: {@link RecipeProvider#getBaseBlockForCrafting} */
     @Override
     @Generated(value = "com.tterrag.registrate.test.meta.UpdateRecipeProvider", date = "Sun, 20 Jul 2025 06:59:06 GMT")
-    public Block getBaseBlock(BlockFamily family, BlockFamily.Variant variant) { return super.getBaseBlock(family, variant); }
+    public Block getBaseBlockForCrafting(BlockFamily family, BlockFamily.Variant variant) {return super.getBaseBlockForCrafting(family, variant);}
 
     /** Generated override to expose protected method: {@link RecipeProvider#insideOf} */
     @Generated(value = "com.tterrag.registrate.test.meta.UpdateRecipeProvider", date = "Sun, 20 Jul 2025 06:59:06 GMT")
@@ -623,9 +624,7 @@ public class RegistrateRecipeProvider extends RecipeProvider implements RecipeOu
     @Generated(value = "com.tterrag.registrate.test.meta.UpdateRecipeProvider", date = "Sun, 20 Jul 2025 06:59:06 GMT")
     public Criterion<InventoryChangeTrigger.TriggerInstance> has(MinMaxBounds.Ints count, ItemLike item) { return super.has(count, item); }
 
-    /**
-     * Generated override to expose protected method: {@link RecipeProvider#has}
-     */
+    /** Generated override to expose protected method: {@link RecipeProvider#has} */
     @Override
     @Generated(value = "com.tterrag.registrate.test.meta.UpdateRecipeProvider", date = "Sun, 20 Jul 2025 06:59:06 GMT")
     public Criterion<InventoryChangeTrigger.TriggerInstance> has(ItemLike itemLike) { return super.has(itemLike); }

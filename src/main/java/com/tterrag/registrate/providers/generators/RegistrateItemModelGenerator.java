@@ -9,6 +9,7 @@ import net.minecraft.client.data.models.model.ModelLocationUtils;
 import net.minecraft.client.data.models.model.ModelTemplate;
 import net.minecraft.client.data.models.model.ModelTemplates;
 import net.minecraft.client.data.models.model.TextureMapping;
+import net.minecraft.client.renderer.block.model.Material;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BlockItem;
@@ -46,11 +47,11 @@ public class RegistrateItemModelGenerator extends ItemModelGenerators {
         itemModelOutput.accept(item, ItemModelUtils.plainModel(template.create(item, textures, modelOutput)));
     }
 
-    public void generateFlatItem(Item item, Identifier layer0) {
+    public void generateFlatItem(Item item, Material layer0) {
         generateFlatItem(item, ModelTemplates.FLAT_ITEM, layer0);
     }
 
-    public void generateFlatItem(Item item, ModelTemplate template, Identifier layer0) {
+    public void generateFlatItem(Item item, ModelTemplate template, Material layer0) {
         itemModelOutput.accept(item, ItemModelUtils.plainModel(template.create(item, TextureMapping.layer0(layer0), modelOutput)));
     }
 

@@ -629,8 +629,8 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
     }
 
     /**
-     * Add a custom translation mapping using the vanilla style of Identifier -&gt; translation key conversion.
-     * Also appends a suffix to the key.
+     * Add a custom translation mapping using the vanilla style of Identifier -&gt; translation key conversion. Also
+     * appends a suffix to the key.
      *
      * @param type
      *                      Type of the object, this is used as a prefix (e.g.

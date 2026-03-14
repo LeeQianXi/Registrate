@@ -14,8 +14,10 @@ import net.minecraft.client.data.models.model.TextureMapping;
 import net.minecraft.client.data.models.model.TextureSlot;
 import net.minecraft.client.data.models.model.TexturedModel;
 import net.minecraft.client.renderer.block.model.BlockModelDefinition;
+import net.minecraft.client.renderer.block.model.Material;
 import net.minecraft.client.renderer.block.model.VariantMutator;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ButtonBlock;
@@ -105,22 +107,25 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     private static ExtendedModelTemplate withRenderType(ModelTemplate template, Identifier renderType) {
-        return ExtendedModelTemplateBuilder.of(template).renderType(renderType).build();
+        return ExtendedModelTemplateBuilder.of(template).build();
     }
 
     private static TextureMapping sideBottomTopTextures(Identifier side, Identifier bottom, Identifier top) {
+        Material ms = new Material(side), mb = new Material(bottom), mt = new Material(top);
         return new TextureMapping()
-                .put(TextureSlot.SIDE, side)
-                .put(TextureSlot.BOTTOM, bottom)
-                .put(TextureSlot.TOP, top);
+                .put(TextureSlot.SIDE, ms)
+                .put(TextureSlot.BOTTOM, mb)
+                .put(TextureSlot.TOP, mt);
     }
 
     public Identifier blockTexture(Block block) {
-        return TextureMapping.getBlockTexture(block);
+        Identifier id = BuiltInRegistries.BLOCK.getKey(block);
+        return id.withPrefix("block/");
     }
 
     public Identifier blockTexture(Block block, String suffix) {
-        return TextureMapping.getBlockTexture(block, suffix);
+        Identifier id = BuiltInRegistries.BLOCK.getKey(block);
+        return id.withPrefix("block/").withSuffix(suffix);
     }
 
     public void generateWithTemplate(Block block, ModelTemplate template, TextureMapping textures) {
@@ -171,9 +176,10 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     private void generateAxisBlockInternal(RotatedPillarBlock block, Identifier side, Identifier end, ModelTemplate cubeColumn, ModelTemplate cubeColumnHorizontal) {
+        Material ms = new Material(side), me = new Material(end);
         generateAxisBlock(block,
-                plainVariant(cubeColumn.create(block, TextureMapping.column(side, end), modelOutput)),
-                plainVariant(cubeColumnHorizontal.create(block, TextureMapping.column(side, end), modelOutput)));
+                plainVariant(cubeColumn.create(block, TextureMapping.column(ms, me), modelOutput)),
+                plainVariant(cubeColumnHorizontal.create(block, TextureMapping.column(ms, me), modelOutput)));
     }
 
     public void generateAxisBlock(RotatedPillarBlock block, MultiVariant vertical, MultiVariant horizontal) {
@@ -183,7 +189,8 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     private static final int DEFAULT_ANGLE_OFFSET = 180;
 
     public void generateHorizontalBlock(Block block, Identifier side, Identifier front, Identifier top) {
-        TextureMapping mapping = new TextureMapping().put(TextureSlot.SIDE, side).put(TextureSlot.FRONT, front).put(TextureSlot.TOP, top);
+        Material ms = new Material(side), mf = new Material(front), mt = new Material(top);
+        TextureMapping mapping = new TextureMapping().put(TextureSlot.SIDE, ms).put(TextureSlot.FRONT, mf).put(TextureSlot.TOP, mt);
         generateHorizontalBlock(block, plainVariant(ModelTemplates.CUBE_ORIENTABLE.create(block, mapping, modelOutput)));
     }
 
@@ -326,7 +333,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     public void generateButtonBlock(ButtonBlock block, Identifier texture) {
-        TextureMapping textures = TextureMapping.defaultTexture(texture);
+        TextureMapping textures = TextureMapping.defaultTexture(new Material(texture));
         MultiVariant button = plainVariant(ModelTemplates.BUTTON.create(block, textures, modelOutput));
         MultiVariant buttonPressed = plainVariant(ModelTemplates.BUTTON_PRESSED.create(block, textures, modelOutput));
         generateButtonBlock(block, button, buttonPressed);
@@ -337,7 +344,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     public void generatePressurePlateBlock(PressurePlateBlock block, Identifier texture) {
-        TextureMapping textures = TextureMapping.defaultTexture(texture);
+        TextureMapping textures = TextureMapping.defaultTexture(new Material(texture));
         MultiVariant pressurePlate = plainVariant(ModelTemplates.PRESSURE_PLATE_UP.create(block, textures, modelOutput));
         MultiVariant pressurePlateDown = plainVariant(ModelTemplates.PRESSURE_PLATE_DOWN.create(block, textures, modelOutput));
         generatePressurePlateBlock(block, pressurePlate, pressurePlateDown);
@@ -348,7 +355,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     public void generateSignBlock(StandingSignBlock signBlock, WallSignBlock wallSignBlock, Identifier texture) {
-        MultiVariant sign = plainVariant(ModelTemplates.PARTICLE_ONLY.create(signBlock, TextureMapping.particle(texture), modelOutput));
+        MultiVariant sign = plainVariant(ModelTemplates.PARTICLE_ONLY.create(signBlock, TextureMapping.particle(new Material(texture)), modelOutput));
         generateSignBlock(signBlock, wallSignBlock, sign);
     }
 
@@ -358,7 +365,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     public void generateHangingSignBlock(CeilingHangingSignBlock hangingSignBlock, WallHangingSignBlock wallHangingSignBlock, Identifier texture) {
-        MultiVariant hangingSign = plainVariant(ModelTemplates.PARTICLE_ONLY.create(hangingSignBlock, TextureMapping.particle(texture), modelOutput));
+        MultiVariant hangingSign = plainVariant(ModelTemplates.PARTICLE_ONLY.create(hangingSignBlock, TextureMapping.particle(new Material(texture)), modelOutput));
         generateHangingSignBlock(hangingSignBlock, wallHangingSignBlock, hangingSign);
     }
 
@@ -405,21 +412,21 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     private void generateFenceBlockInternal(FenceBlock block, Identifier texture, ModelTemplate fencePostTemplate, ModelTemplate fenceSideTemplate) {
-        TextureMapping textures = TextureMapping.defaultTexture(texture);
+        TextureMapping textures = TextureMapping.defaultTexture(new Material(texture));
         generateFourWayBlock(block,
                 plainVariant(fencePostTemplate.create(block, textures, modelOutput)),
                 plainVariant(fenceSideTemplate.create(block, textures, modelOutput)));
     }
 
     private void generateFenceBlockInternal(FenceBlock block, String name, Identifier texture, ModelTemplate fencePostTemplate, ModelTemplate fenceSideTemplate) {
-        TextureMapping textures = TextureMapping.defaultTexture(texture);
+        TextureMapping textures = TextureMapping.defaultTexture(new Material(texture));
         generateFourWayBlock(block,
                 plainVariant(fencePostTemplate.create(modLoc("block/" + name + "_fence_post"), textures, modelOutput)),
                 plainVariant(fenceSideTemplate.create(modLoc("block/" + name + "_fence_side"), textures, modelOutput)));
     }
 
     public void generateFenceGateBlock(FenceGateBlock block, Identifier texture) {
-        TextureMapping textures = TextureMapping.defaultTexture(texture);
+        TextureMapping textures = TextureMapping.defaultTexture(new Material(texture));
         generateFenceGateBlock(block,
                 plainVariant(ModelTemplates.FENCE_GATE_CLOSED.create(block, textures, modelOutput)),
                 plainVariant(ModelTemplates.FENCE_GATE_OPEN.create(block, textures, modelOutput)),
@@ -432,7 +439,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     public void generateFenceGateBlockWithRenderType(FenceGateBlock block, Identifier texture, Identifier renderType) {
-        TextureMapping textureMapping = TextureMapping.defaultTexture(texture);
+        TextureMapping textureMapping = TextureMapping.defaultTexture(new Material(texture));
         generateFenceGateBlock(block,
                 plainVariant(withRenderType(ModelTemplates.FENCE_GATE_CLOSED, renderType).create(block, textureMapping, modelOutput)),
                 plainVariant(withRenderType(ModelTemplates.FENCE_GATE_OPEN, renderType).create(block, textureMapping, modelOutput)),
@@ -450,7 +457,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
 
     private void generateFenceGateBlockInternal(FenceGateBlock block, Identifier baseName, Identifier texture, ModelTemplate closedTemplate, ModelTemplate openTemplate, ModelTemplate wallClosedTemplate, ModelTemplate wallOpenTemplate) {
         Identifier baseModel = baseName.withPrefix("block/");
-        TextureMapping textures = TextureMapping.defaultTexture(texture);
+        TextureMapping textures = TextureMapping.defaultTexture(new Material(texture));
         MultiVariant gate = plainVariant(closedTemplate.create(baseModel, textures, modelOutput));
         MultiVariant gateOpen = plainVariant(openTemplate.create(baseModel.withSuffix("_open"), textures, modelOutput));
         MultiVariant gateWall = plainVariant(wallClosedTemplate.create(baseModel.withSuffix("_wall"), textures, modelOutput));
@@ -463,7 +470,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     public void generateWallBlock(WallBlock block, Identifier texture) {
-        TextureMapping textures = TextureMapping.singleSlot(TextureSlot.WALL, texture);
+        TextureMapping textures = TextureMapping.singleSlot(TextureSlot.WALL, new Material(texture));
         blockStateOutput.accept(createWall(block,
                 plainVariant(ModelTemplates.WALL_POST.create(block, textures, modelOutput)),
                 plainVariant(ModelTemplates.WALL_LOW_SIDE.create(block, textures, modelOutput)),
@@ -476,7 +483,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     public void generateWallBlockWithRenderType(WallBlock block, Identifier texture, Identifier renderType) {
-        TextureMapping textureMapping = TextureMapping.singleSlot(TextureSlot.WALL, texture);
+        TextureMapping textureMapping = TextureMapping.singleSlot(TextureSlot.WALL, new Material(texture));
         generateWallBlock(block,
                 plainVariant(withRenderType(ModelTemplates.WALL_POST, renderType).create(block, textureMapping, modelOutput)),
                 plainVariant(withRenderType(ModelTemplates.WALL_LOW_SIDE, renderType).create(block, textureMapping, modelOutput)),
@@ -492,7 +499,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     private void generateWallBlockInternal(WallBlock block, Identifier baseName, Identifier texture, ModelTemplate postTemplate, ModelTemplate sideTemplate, ModelTemplate tallSideTemplate) {
-        TextureMapping textures = TextureMapping.singleSlot(TextureSlot.WALL, texture);
+        TextureMapping textures = TextureMapping.singleSlot(TextureSlot.WALL, new Material(texture));
         Identifier baseModel = baseName.withPrefix("block/");
         generateWallBlock(block,
                 plainVariant(postTemplate.create(baseModel.withSuffix("_post"), textures, modelOutput)),
@@ -505,7 +512,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     public void generatePaneBlock(IronBarsBlock block, Identifier pane, Identifier edge) {
-        TextureMapping textures = new TextureMapping().put(TextureSlot.PANE, pane).put(TextureSlot.EDGE, edge);
+        TextureMapping textures = new TextureMapping().put(TextureSlot.PANE, new Material(pane)).put(TextureSlot.EDGE, new Material(edge));
         generatePaneBlock(block,
                 plainVariant(ModelTemplates.STAINED_GLASS_PANE_POST.create(block, textures, modelOutput)),
                 plainVariant(ModelTemplates.STAINED_GLASS_PANE_SIDE.create(block, textures, modelOutput)),
@@ -520,7 +527,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     public void generatePaneBlockWithRenderType(IronBarsBlock block, Identifier pane, Identifier edge, Identifier renderType) {
-        TextureMapping textureMapping = new TextureMapping().put(TextureSlot.PANE, pane).put(TextureSlot.EDGE, edge);
+        TextureMapping textureMapping = new TextureMapping().put(TextureSlot.PANE, new Material(pane)).put(TextureSlot.EDGE, new Material(edge));
         generatePaneBlock(block,
                 plainVariant(withRenderType(ModelTemplates.STAINED_GLASS_PANE_POST, renderType).create(block, textureMapping, modelOutput)),
                 plainVariant(withRenderType(ModelTemplates.STAINED_GLASS_PANE_SIDE, renderType).create(block, textureMapping, modelOutput)),
@@ -541,7 +548,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
 
     private void generatePaneBlockInternal(IronBarsBlock block, Identifier baseName, Identifier pane, Identifier edge, ModelTemplate postTemplate, ModelTemplate sideTemplate, ModelTemplate sideAltTemplate, ModelTemplate noSideTemplate, ModelTemplate noSideAltTemplate) {
         Identifier baseModel = baseName.withPrefix("block/");
-        TextureMapping textures = new TextureMapping().put(TextureSlot.PANE, pane).put(TextureSlot.EDGE, edge);
+        TextureMapping textures = new TextureMapping().put(TextureSlot.PANE, new Material(pane)).put(TextureSlot.EDGE, new Material(edge));
         generatePaneBlock(block,
                 plainVariant(postTemplate.create(baseModel.withSuffix("_post"), textures, modelOutput)),
                 plainVariant(sideTemplate.create(baseModel.withSuffix("_side"), textures, modelOutput)),
@@ -564,7 +571,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     public void generateDoorBlock(DoorBlock block, Identifier bottom, Identifier top) {
-        TextureMapping textures = TextureMapping.door(top, bottom);
+        TextureMapping textures = TextureMapping.door(new Material(top), new Material(bottom));
         generateDoorBlock(block,
                 plainVariant(ModelTemplates.DOOR_BOTTOM_LEFT.create(block, textures, modelOutput)),
                 plainVariant(ModelTemplates.DOOR_BOTTOM_LEFT_OPEN.create(block, textures, modelOutput)),
@@ -581,7 +588,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     public void generateDoorBlockWithRenderType(DoorBlock block, Identifier bottom, Identifier top, Identifier renderType) {
-        TextureMapping textures = TextureMapping.door(top, bottom);
+        TextureMapping textures = TextureMapping.door(new Material(top), new Material(bottom));
         generateDoorBlock(block,
                 plainVariant(withRenderType(ModelTemplates.DOOR_BOTTOM_LEFT, renderType).create(block, textures, modelOutput)),
                 plainVariant(withRenderType(ModelTemplates.DOOR_BOTTOM_LEFT_OPEN, renderType).create(block, textures, modelOutput)),
@@ -615,7 +622,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
 
     private void generateDoorBlockInternal(DoorBlock block, Identifier baseName, Identifier bottom, Identifier top, ModelTemplate bottomLeftTemplate, ModelTemplate bottomLeftOpenTemplate, ModelTemplate bottomRightTemplate, ModelTemplate bottomRightOpenTemplate, ModelTemplate topLeftTemplate, ModelTemplate topLeftOpenTemplate, ModelTemplate topRightTemplate, ModelTemplate topRightOpenTemplate) {
         Identifier baseModel = baseName.withPrefix("block/");
-        TextureMapping textures = TextureMapping.door(top, bottom);
+        TextureMapping textures = TextureMapping.door(new Material(top), new Material(bottom));
         MultiVariant bottomLeft = plainVariant(bottomLeftTemplate.create(baseModel.withSuffix("_bottom_left"), textures, modelOutput));
         MultiVariant bottomLeftOpen = plainVariant(bottomLeftOpenTemplate.create(baseModel.withSuffix("_bottom_left_open"), textures, modelOutput));
         MultiVariant bottomRight = plainVariant(bottomRightTemplate.create(baseModel.withSuffix("_bottom_right"), textures, modelOutput));
@@ -632,7 +639,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     public void generateTrapdoorBlock(TrapDoorBlock block, Identifier texture, boolean orientable) {
-        TextureMapping textures = TextureMapping.defaultTexture(texture);
+        TextureMapping textures = TextureMapping.defaultTexture(new Material(texture));
         generateTrapdoorBlock(block,
                 plainVariant((orientable ? ModelTemplates.ORIENTABLE_TRAPDOOR_BOTTOM : ModelTemplates.TRAPDOOR_BOTTOM).create(block, textures, modelOutput)),
                 plainVariant((orientable ? ModelTemplates.ORIENTABLE_TRAPDOOR_TOP : ModelTemplates.TRAPDOOR_TOP).create(block, textures, modelOutput)),
@@ -645,7 +652,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
     }
 
     public void generateTrapdoorBlockWithRenderType(TrapDoorBlock block, Identifier texture, boolean orientable, Identifier renderType) {
-        TextureMapping textures = TextureMapping.defaultTexture(texture);
+        TextureMapping textures = TextureMapping.defaultTexture(new Material(texture));
         generateTrapdoorBlock(block,
                 plainVariant(withRenderType(orientable ? ModelTemplates.ORIENTABLE_TRAPDOOR_BOTTOM : ModelTemplates.TRAPDOOR_BOTTOM, renderType).create(block, textures, modelOutput)),
                 plainVariant(withRenderType(orientable ? ModelTemplates.ORIENTABLE_TRAPDOOR_TOP : ModelTemplates.TRAPDOOR_TOP, renderType).create(block, textures, modelOutput)),
@@ -673,7 +680,7 @@ public class RegistrateBlockModelGenerator extends BlockModelGenerators {
 
     private void generateTrapdoorBlockInternal(TrapDoorBlock block, Identifier baseName, Identifier texture, boolean orientable, ModelTemplate bottomTemplate, ModelTemplate topTemplate, ModelTemplate openTemplate) {
         Identifier baseModel = baseName.withPrefix("block/");
-        TextureMapping textures = TextureMapping.defaultTexture(texture);
+        TextureMapping textures = TextureMapping.defaultTexture(new Material(texture));
         MultiVariant bottom = plainVariant(bottomTemplate.create(baseModel.withSuffix("_bottom"), textures, modelOutput));
         MultiVariant top = plainVariant(topTemplate.create(baseModel.withSuffix("_top"), textures, modelOutput));
         MultiVariant open = plainVariant(openTemplate.create(baseModel.withSuffix("_open"), textures, modelOutput));

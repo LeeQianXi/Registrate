@@ -91,8 +91,8 @@ public class RegistrateLootTableProvider extends LootTableProvider implements Re
     }
 
     @Override
-    protected void validate(WritableRegistry<LootTable> writableregistry, ValidationContextSource validationContext, ProblemReporter.Collector problems) {
-        currentLootCreators.forEach(c -> c.validate(writableregistry, validationContext));
+    protected void validate(WritableRegistry<LootTable> writableregistry, ValidationContextSource validationcontext, ProblemReporter.Collector problemreporter$collector) {
+        currentLootCreators.forEach(c -> c.validate(writableregistry, validationcontext));
     }
 
     @SuppressWarnings("unchecked")
