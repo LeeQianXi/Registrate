@@ -1,12 +1,9 @@
 package com.tterrag.registrate.builders;
 
 import net.minecraft.client.color.block.BlockColor;
-import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.block.model.SingleVariant;
 import net.minecraft.client.renderer.block.model.Variant;
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -14,7 +11,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
@@ -94,8 +90,6 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
 
     private NonNullSupplier<BlockBehaviour.Properties> initialProperties;
     private NonNullFunction<BlockBehaviour.Properties, BlockBehaviour.Properties> propertiesCallback = NonNullUnaryOperator.identity();
-    @Nullable
-    private Supplier<Supplier<ChunkSectionLayer>> renderLayer;
 
     @Nullable
     private NonNullSupplier<Supplier<BlockColor>> colorHandler;
@@ -134,33 +128,6 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
     public BlockBuilder<T, P> initialProperties(NonNullSupplier<? extends Block> block) {
         initialProperties = () -> BlockBehaviour.Properties.ofFullCopy(block.get());
         return this;
-    }
-
-    /**
-     * @deprecated Set your render type in your model's JSON
-     *             ({@link net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder#renderType(Identifier)})
-     */
-    @Deprecated(forRemoval = true)
-    public BlockBuilder<T, P> addLayer(Supplier<Supplier<ChunkSectionLayer>> layer) {
-        if (this.renderLayer == null) {
-            onRegister(this::registerLayers);
-            this.renderLayer = layer;
-        } else {
-            throw new IllegalStateException("Only a single layer can be registered for a block");
-        }
-        return this;
-    }
-
-    @SuppressWarnings("deprecation")
-    protected void registerLayers(T entry) {
-        RegistrateDistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-            OneTimeEventReceiver.addModListener(getOwner(), FMLClientSetupEvent.class, $ -> {
-                if (renderLayer != null) {
-                    ChunkSectionLayer layer = renderLayer.get().get();
-                    ItemBlockRenderTypes.setRenderLayer(entry, layer);
-                }
-            });
-        });
     }
 
     /**

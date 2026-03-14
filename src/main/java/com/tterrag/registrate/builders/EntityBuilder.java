@@ -264,6 +264,7 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
      *
      * @return this {@link EntityBuilder}
      */
+    @Deprecated
     public EntityBuilder<T, P> defaultLang() {
         return lang(EntityType::getDescriptionId);
     }
